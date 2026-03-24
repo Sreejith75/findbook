@@ -1,7 +1,5 @@
 ﻿global using System.Runtime.CompilerServices;
 global using Ardalis.SharedKernel;
-global using FindBook.Core.ContributorAggregate;
-global using FindBook.UseCases.Contributors.Create;
 global using Shouldly;
 global using Mediator;
 global using Microsoft.Extensions.Logging;

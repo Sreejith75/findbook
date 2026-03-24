@@ -6,8 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Core\ContributorAggregate\**\*.cs" />
+    <Compile Remove="Core\Services\DeleteContributorSevice_DeleteContributor.cs" />
     <Compile Remove="Core\Services\ToDoItemSearchService_GetAllIncompleteItems.cs" />
     <Compile Remove="Core\Services\ToDoItemSearchService_GetNextIncompleteItem.cs" />
+    <Compile Remove="UseCases\Contributors\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

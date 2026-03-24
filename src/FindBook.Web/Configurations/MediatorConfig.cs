@@ -1,7 +1,5 @@
 ﻿using Ardalis.SharedKernel;
-using FindBook.Core.ContributorAggregate;
-using FindBook.Infrastructure;
-using FindBook.UseCases.Contributors.Create;
+using FindBook.Core.UserManagement.UserAccountAggregate;
 
 namespace FindBook.Web.Configurations;
 
@@ -20,10 +18,8 @@ public static class MediatorConfig
       // Supply any TYPE from each assembly you want scanned (the generator finds the assembly from the type)
       options.Assemblies =
       [
-        typeof(Contributor),                       // Core
-        typeof(CreateContributorCommand),         // UseCases
-        typeof(InfrastructureServiceExtensions), // Infrastructure
-        typeof(MediatorConfig)                  // Web
+        typeof(UserAccount),   // Core
+        typeof(MediatorConfig) // Web
       ];
 
       // Register pipeline behaviors here (order matters)
