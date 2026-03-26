@@ -1,4 +1,4 @@
-﻿using FindBook.Core.ContributorAggregate;
+using FindBook.Core.ContributorAggregate;
 
 namespace FindBook.Infrastructure.Data.Config;
 
@@ -6,21 +6,37 @@ public class ContributorConfiguration : IEntityTypeConfiguration<Contributor>
 {
   public void Configure(EntityTypeBuilder<Contributor> builder)
   {
-    builder.Property(entity => entity.Id)
-      .HasValueGenerator<VogenIdValueGenerator<AppDbContext, Contributor, ContributorId>>()
-      .HasVogenConversion()
+    builder.ToTable("Contributors");
+
+    // Primary Key
+    builder.HasKey(e => e.Id);
+
+    builder.Property(e => e.Id)
+      .HasColumnName("Id")
+      .ValueGeneratedOnAdd()
+      .HasConversion(id => id.Value, value => ContributorId.From(value))
       .IsRequired();
 
-    builder.Property(entity => entity.Name)
-      .HasVogenConversion()
+    // ContributorName (Vogen string value object)
+    builder.Property(e => e.Name)
+      .HasColumnName("Name")
       .HasMaxLength(ContributorName.MaxLength)
+      .HasConversion(v => v.Value, v => ContributorName.From(v))
       .IsRequired();
 
-    builder.OwnsOne(builder => builder.PhoneNumber);
+    // ContributorStatus (SmartEnum → int)
+    builder.Property(e => e.Status)
+      .HasColumnName("Status")
+      .HasConversion(v => v.Value, v => ContributorStatus.FromValue(v))
+      .IsRequired();
 
-    builder.Property(x => x.Status)
-      .HasConversion(
-          x => x.Value,
-          x => ContributorStatus.FromValue(x));
+    // PhoneNumber (nullable Vogen string owned value object)
+    builder.OwnsOne(e => e.PhoneNumber, phone =>
+    {
+      phone.Property(p => p.Value)
+        .HasColumnName("PhoneNumber")
+        .HasMaxLength(30)
+        .IsRequired(false);
+    });
   }
 }

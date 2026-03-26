@@ -29,6 +29,9 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="Mediator.Abstractions" />
     <PackageReference Include="Mediator.SourceGenerator" />
+    <PackageReference Include="Scriban">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

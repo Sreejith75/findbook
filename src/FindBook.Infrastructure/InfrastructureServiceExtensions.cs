@@ -1,6 +1,7 @@
-﻿using FindBook.Infrastructure.Data;
+using FindBook.Infrastructure.Data;
 
 namespace FindBook.Infrastructure;
+
 public static class InfrastructureServiceExtensions
 {
   public static IServiceCollection AddInfrastructureServices(
@@ -8,14 +9,15 @@ public static class InfrastructureServiceExtensions
     ConfigurationManager config,
     ILogger logger)
   {
-    // Try to get connection strings in order of priority:
-    // 1. "cleanarchitecture" - provided by Aspire when using .WithReference(cleanArchDb)
-    // 2. "DefaultConnection" - traditional SQL Server connection
-    // 3. "SqliteConnection" - fallback to SQLite
-    string? connectionString = config.GetConnectionString("cleanarchitecture")
-                               ?? config.GetConnectionString("DefaultConnection") 
-                               ?? config.GetConnectionString("SqliteConnection");
-    Guard.Against.Null(connectionString);
+    // Connection string priority:
+    // 1. "cleanarchitecture" — injected by .NET Aspire via .WithReference(postgresDb)
+    // 2. "DefaultConnection" — manual PostgreSQL connection string (e.g. appsettings.json)
+    string? connectionString =
+      config.GetConnectionString("cleanarchitecture")
+      ?? config.GetConnectionString("DefaultConnection");
+
+    Guard.Against.Null(connectionString, message:
+      "A PostgreSQL connection string must be provided via 'cleanarchitecture' (Aspire) or 'DefaultConnection'.");
 
     services.AddScoped<EventDispatchInterceptor>();
     services.AddScoped<IDomainEventDispatcher, MediatorDomainEventDispatcher>();
@@ -23,23 +25,18 @@ public static class InfrastructureServiceExtensions
     services.AddDbContext<AppDbContext>((provider, options) =>
     {
       var eventDispatchInterceptor = provider.GetRequiredService<EventDispatchInterceptor>();
-      
-      // Use SQL Server if Aspire or DefaultConnection is available, otherwise use SQLite
-      if (config.GetConnectionString("cleanarchitecture") != null || 
-          config.GetConnectionString("DefaultConnection") != null)
+
+      // PostgreSQL via Npgsql
+      options.UseNpgsql(connectionString, npgsql =>
       {
-        options.UseSqlServer(connectionString);
-      }
-      else
-      {
-        options.UseSqlite(connectionString);
-      }
-      
+        npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+      });
+
       options.AddInterceptors(eventDispatchInterceptor);
     });
 
     services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>))
-           .AddScoped(typeof(IReadRepository<>), typeof(EfRepository<>));
+            .AddScoped(typeof(IReadRepository<>), typeof(EfRepository<>));
 
     logger.LogInformation("{Project} services registered", "Infrastructure");
 

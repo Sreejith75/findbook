@@ -1,4 +1,5 @@
-﻿using FindBook.Web.Configurations;
+﻿using FindBook.Web.Books;
+using FindBook.Web.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,7 @@ var app = builder.Build();
 await app.UseAppMiddlewareAndSeedDatabase();
 
 app.MapDefaultEndpoints(); // Aspire health checks and metrics
+app.MapBookImageEndpoints();
 
 app.Run();
 

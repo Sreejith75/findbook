@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<Library> Libraries => Set<Library>();
   public DbSet<Category> Categories => Set<Category>();
   public DbSet<Book> Books => Set<Book>();
+  public DbSet<BookImage> BookImages => Set<BookImage>();
   public DbSet<Rental> Rentals => Set<Rental>();
   public DbSet<DeliveryTask> DeliveryTasks => Set<DeliveryTask>();
   public DbSet<BookReview> BookReviews => Set<BookReview>();
