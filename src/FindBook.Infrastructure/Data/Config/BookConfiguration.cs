@@ -15,7 +15,7 @@ public class BookConfiguration : IEntityTypeConfiguration<Book>
 
     builder.Property(e => e.Id)
       .HasColumnName("Id")
-      .ValueGeneratedOnAdd()
+      .ValueGeneratedNever()
       .HasConversion(id => id.Value, value => BookId.From(value))
       .IsRequired();
 

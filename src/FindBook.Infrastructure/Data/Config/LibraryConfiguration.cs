@@ -14,7 +14,7 @@ public class LibraryConfiguration : IEntityTypeConfiguration<Library>
 
     builder.Property(e => e.Id)
       .HasColumnName("Id")
-      .ValueGeneratedOnAdd()
+      .ValueGeneratedNever()
       .HasConversion(id => id.Value, value => LibraryId.From(value))
       .IsRequired();
 

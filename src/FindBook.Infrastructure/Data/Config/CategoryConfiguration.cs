@@ -13,7 +13,7 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
     builder.Property(e => e.Id)
       .HasColumnName("Id")
-      .ValueGeneratedOnAdd()
+      .ValueGeneratedNever()
       .HasConversion(id => id.Value, value => CategoryId.From(value))
       .IsRequired();
 

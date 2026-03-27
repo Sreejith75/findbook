@@ -1,5 +1,5 @@
 using FindBook.Core.LibraryInventory.BookAggregate;
-using FindBook.Infrastructure.Data;
+using FindBook.UseCases.Books;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace FindBook.Web.Books;
@@ -17,14 +17,14 @@ public static class BookImageEndpoints
 
   public static IEndpointRouteBuilder MapBookImageEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/books")
+    var group = app.MapGroup("/api/books")
       .WithTags("Books");
 
     group.MapPost("/{bookId:int:min(1)}/cover",
       async Task<Results<Ok<BookImageUploadResponse>, NotFound, ValidationProblem>> (
         int bookId,
         IFormFile file,
-        AppDbContext dbContext,
+        IMediator mediator,
         CancellationToken cancellationToken) =>
       {
         var validationErrors = ValidateFile(file);
@@ -33,47 +33,31 @@ public static class BookImageEndpoints
           return TypedResults.ValidationProblem(validationErrors);
         }
 
-        var parsedBookId = BookId.From(bookId);
-        var bookExists = await dbContext.Books.AnyAsync(b => b.Id == parsedBookId, cancellationToken);
-        if (!bookExists)
-        {
-          return TypedResults.NotFound();
-        }
-
         await using var stream = file.OpenReadStream();
         using var memoryStream = new MemoryStream();
         await stream.CopyToAsync(memoryStream, cancellationToken);
 
-        var imageBytes = memoryStream.ToArray();
-        var existingImage = await dbContext.BookImages
-          .SingleOrDefaultAsync(i => i.BookId == parsedBookId, cancellationToken);
+        var result = await mediator.Send(new UploadBookImageCommand(
+          BookId.From(bookId),
+          file.ContentType,
+          file.FileName,
+          memoryStream.ToArray(),
+          file.Length), cancellationToken);
 
-        if (existingImage is null)
+        if (result.Status == ResultStatus.NotFound)
         {
-          existingImage = new BookImage(
-            parsedBookId,
-            file.ContentType,
-            file.FileName,
-            imageBytes,
-            file.Length);
-
-          dbContext.BookImages.Add(existingImage);
-        }
-        else
-        {
-          existingImage.UpdateContent(file.ContentType, file.FileName, imageBytes, file.Length);
+          return TypedResults.NotFound();
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-
+        var existingImage = result.Value;
         return TypedResults.Ok(new BookImageUploadResponse(
-          existingImage.Id.Value,
+          existingImage.Id,
           bookId,
           existingImage.ContentType,
           existingImage.FileName,
           existingImage.SizeInBytes,
           existingImage.CreatedOn,
-          $"/books/{bookId}/cover"));
+          $"/api/books/{bookId}/cover"));
       })
       .Accepts<IFormFile>("multipart/form-data")
       .Produces<BookImageUploadResponse>()
@@ -84,24 +68,20 @@ public static class BookImageEndpoints
     group.MapGet("/{bookId:int:min(1)}/cover",
       async Task<Results<FileContentHttpResult, NotFound>> (
         int bookId,
-        AppDbContext dbContext,
+        IMediator mediator,
         CancellationToken cancellationToken) =>
       {
-        var parsedBookId = BookId.From(bookId);
+        var result = await mediator.Send(new GetBookImageQuery(BookId.From(bookId)), cancellationToken);
 
-        var image = await dbContext.BookImages
-          .AsNoTracking()
-          .SingleOrDefaultAsync(i => i.BookId == parsedBookId, cancellationToken);
-
-        if (image is null)
+        if (result.Status == ResultStatus.NotFound)
         {
           return TypedResults.NotFound();
         }
 
         return TypedResults.File(
-          image.Data,
-          image.ContentType,
-          fileDownloadName: image.FileName,
+          result.Value.Data,
+          result.Value.ContentType,
+          fileDownloadName: result.Value.FileName,
           enableRangeProcessing: false);
       })
       .Produces(StatusCodes.Status200OK)

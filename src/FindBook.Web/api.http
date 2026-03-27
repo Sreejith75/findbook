@@ -1,43 +1,94 @@
-# For more info on HTTP files go to https://aka.ms/vs/httpfile
 @host=https://localhost
 @port=57679
 
-// List all contributors
-GET {{host}}:{{port}}/Contributors
+### Users
+GET {{host}}:{{port}}/api/users
 
 ###
 
-// Get a specific contributor
-@id_to_get=1
-GET {{host}}:{{port}}/Contributors/{{id_to_get}}
-
-###
-
-// Add a new contributor
-POST {{host}}:{{port}}/Contributors
+POST {{host}}:{{port}}/api/users
 Content-Type: application/json
 
 {
-  "name": "John Doe 3",
-  "email": "test@test.com",
-  "phoneNumber": "1234567890"
+  "fullName": "Priya Menon",
+  "email": "priya@example.com",
+  "passwordHash": "hash-priya",
+  "role": "User",
+  "phoneNumber": "+91-90000-20001",
+  "managedLibraryId": null
+}
+
+### Libraries
+GET {{host}}:{{port}}/api/libraries
+
+###
+
+### Categories
+GET {{host}}:{{port}}/api/categories
+
+###
+
+### Books
+GET {{host}}:{{port}}/api/books?q=Clean&availableOnly=true
+
+###
+
+POST {{host}}:{{port}}/api/books
+Content-Type: application/json
+
+{
+  "libraryId": 1,
+  "categoryId": 2,
+  "title": "Domain-Driven Design Distilled",
+  "author": "Vaughn Vernon",
+  "isbn": "978-0134434421",
+  "description": "A concise guide to strategic and tactical DDD.",
+  "coverImageReference": "/covers/ddd-distilled.jpg",
+  "totalCopies": 3,
+  "availableCopies": 3
 }
 
 ###
 
-// Update a contributor
-@id_to_update=3
-PUT {{host}}:{{port}}/Contributors/{{id_to_update}}
+### Rentals
+POST {{host}}:{{port}}/api/rentals
 Content-Type: application/json
 
 {
-  "id": {{id_to_update}},
-  "name": "ardalis2"
+  "userAccountId": 2,
+  "bookId": 3,
+  "libraryId": 2,
+  "rentedOn": "2026-03-27",
+  "deliveryAddress": {
+    "street": "17 Green Park",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "postalCode": "560076",
+    "country": "India"
+  }
 }
 
 ###
 
-// Delete a contributor
-@id_to_delete=1
-DELETE {{host}}:{{port}}/Contributors/{{id_to_delete}}
+### Delivery
+GET {{host}}:{{port}}/api/delivery-tasks
 
+###
+
+### Reviews
+POST {{host}}:{{port}}/api/reviews
+Content-Type: application/json
+
+{
+  "bookId": 2,
+  "reviewerAccountId": 2,
+  "rating": 4,
+  "title": "Strong read",
+  "content": "Well-paced and easy to recommend.",
+  "createdOn": "2026-03-27T08:30:00Z"
+}
+
+###
+
+### Admin overview
+GET {{host}}:{{port}}/api/admin/overview

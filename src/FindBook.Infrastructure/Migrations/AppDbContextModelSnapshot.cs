@@ -25,11 +25,8 @@ namespace FindBook.Infrastructure.Migrations
             modelBuilder.Entity("FindBook.Core.Delivery.DeliveryTaskAggregate.DeliveryTask", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("Id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTimeOffset>("AssignedAt")
                         .HasColumnType("timestamp with time zone")
@@ -67,11 +64,8 @@ namespace FindBook.Infrastructure.Migrations
             modelBuilder.Entity("FindBook.Core.Feedback.BookReviewAggregate.BookReview", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("Id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BookId")
                         .HasColumnType("integer")
@@ -120,11 +114,8 @@ namespace FindBook.Infrastructure.Migrations
             modelBuilder.Entity("FindBook.Core.LibraryInventory.BookAggregate.Book", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("Id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Author")
                         .IsRequired()
@@ -177,11 +168,8 @@ namespace FindBook.Infrastructure.Migrations
             modelBuilder.Entity("FindBook.Core.LibraryInventory.BookAggregate.BookImage", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("Id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BookId")
                         .HasColumnType("integer")
@@ -222,11 +210,8 @@ namespace FindBook.Infrastructure.Migrations
             modelBuilder.Entity("FindBook.Core.LibraryInventory.CategoryAggregate.Category", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("Id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -245,11 +230,8 @@ namespace FindBook.Infrastructure.Migrations
             modelBuilder.Entity("FindBook.Core.LibraryInventory.LibraryAggregate.Library", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("Id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ContactEmail")
                         .IsRequired()
@@ -280,11 +262,8 @@ namespace FindBook.Infrastructure.Migrations
             modelBuilder.Entity("FindBook.Core.Rental.RentalAggregate.Rental", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("Id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BookId")
                         .HasColumnType("integer")
@@ -324,11 +303,8 @@ namespace FindBook.Infrastructure.Migrations
             modelBuilder.Entity("FindBook.Core.UserManagement.UserAccountAggregate.UserAccount", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("Id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -604,6 +580,9 @@ namespace FindBook.Infrastructure.Migrations
                 {
                     b.OwnsMany("FindBook.Core.UserManagement.UserAccountAggregate.SavedAddress", "SavedAddresses", b1 =>
                         {
+                            b1.Property<int>("UserAccountId")
+                                .HasColumnType("integer");
+
                             b1.Property<int>("Id")
                                 .ValueGeneratedOnAdd()
                                 .HasColumnType("integer")
@@ -615,12 +594,7 @@ namespace FindBook.Infrastructure.Migrations
                                 .HasColumnType("boolean")
                                 .HasColumnName("IsDefault");
 
-                            b1.Property<int>("UserAccountId")
-                                .HasColumnType("integer");
-
-                            b1.HasKey("Id");
-
-                            b1.HasIndex("UserAccountId");
+                            b1.HasKey("UserAccountId", "Id");
 
                             b1.ToTable("SavedAddresses", (string)null);
 
@@ -629,6 +603,9 @@ namespace FindBook.Infrastructure.Migrations
 
                             b1.OwnsOne("FindBook.Core.SharedKernel.PostalAddress", "Address", b2 =>
                                 {
+                                    b2.Property<int>("SavedAddressUserAccountId")
+                                        .HasColumnType("integer");
+
                                     b2.Property<int>("SavedAddressId")
                                         .HasColumnType("integer");
 
@@ -662,12 +639,12 @@ namespace FindBook.Infrastructure.Migrations
                                         .HasColumnType("character varying(250)")
                                         .HasColumnName("Street");
 
-                                    b2.HasKey("SavedAddressId");
+                                    b2.HasKey("SavedAddressUserAccountId", "SavedAddressId");
 
                                     b2.ToTable("SavedAddresses");
 
                                     b2.WithOwner()
-                                        .HasForeignKey("SavedAddressId");
+                                        .HasForeignKey("SavedAddressUserAccountId", "SavedAddressId");
                                 });
 
                             b1.Navigation("Address")

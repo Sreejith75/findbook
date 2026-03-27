@@ -1,4 +1,5 @@
 ﻿using Ardalis.SharedKernel;
+using FindBook.UseCases.Admin;
 using FindBook.Core.UserManagement.UserAccountAggregate;
 
 namespace FindBook.Web.Configurations;
@@ -19,6 +20,7 @@ public static class MediatorConfig
       options.Assemblies =
       [
         typeof(UserAccount),   // Core
+        typeof(GetAdminOverviewQuery), // UseCases
         typeof(MediatorConfig) // Web
       ];
 

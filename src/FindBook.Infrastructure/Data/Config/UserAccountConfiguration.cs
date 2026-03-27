@@ -15,7 +15,7 @@ public class UserAccountConfiguration : IEntityTypeConfiguration<UserAccount>
 
     builder.Property(e => e.Id)
       .HasColumnName("Id")
-      .ValueGeneratedOnAdd()
+      .ValueGeneratedNever()
       .HasConversion(id => id.Value, value => UserAccountId.From(value))
       .IsRequired();
 
@@ -70,7 +70,7 @@ public class UserAccountConfiguration : IEntityTypeConfiguration<UserAccount>
     {
       sa.ToTable("SavedAddresses");
       sa.WithOwner().HasForeignKey("UserAccountId");
-      sa.HasKey(a => a.Id);
+      sa.HasKey("UserAccountId", "Id");
 
       sa.Property(a => a.Id)
         .HasColumnName("Id")

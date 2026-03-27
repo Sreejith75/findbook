@@ -16,7 +16,7 @@ public class RentalConfiguration : IEntityTypeConfiguration<Rental>
 
     builder.Property(e => e.Id)
       .HasColumnName("Id")
-      .ValueGeneratedOnAdd()
+      .ValueGeneratedNever()
       .HasConversion(id => id.Value, value => RentalId.From(value))
       .IsRequired();
 

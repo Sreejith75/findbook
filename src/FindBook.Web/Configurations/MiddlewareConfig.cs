@@ -1,6 +1,5 @@
 ﻿using Ardalis.ListStartupServices;
 using FindBook.Infrastructure.Data;
-using Scalar.AspNetCore;
 
 namespace FindBook.Web.Configurations;
 
@@ -12,22 +11,26 @@ public static class MiddlewareConfig
     {
       app.UseDeveloperExceptionPage();
       app.UseShowAllServicesMiddleware(); // see https://github.com/ardalis/AspNetCoreStartupServices
+      app.UseSwagger();
+      app.UseSwaggerUI(options =>
+      {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "FindBook API v1");
+        options.RoutePrefix = "swagger";
+        options.DocumentTitle = "FindBook API";
+      });
     }
     else
-    {   
-      app.UseDefaultExceptionHandler(); // from FastEndpoints
-      app.UseHsts();
-    }
-
-    app.UseFastEndpoints();
-
-    if (app.Environment.IsDevelopment())
     {
-      app.UseSwaggerGen(options =>
+      app.UseExceptionHandler(exceptionHandlerApp =>
       {
-        options.Path = "/openapi/{documentName}.json";
+        exceptionHandlerApp.Run(async context =>
+        {
+          context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+          context.Response.ContentType = "application/json";
+          await context.Response.WriteAsJsonAsync(new { message = "An unexpected error occurred." });
+        });
       });
-      app.MapScalarApiReference();
+      app.UseHsts();
     }
 
     app.UseHttpsRedirection(); // Note this will drop Authorization headers

@@ -15,7 +15,7 @@ public class DeliveryTaskConfiguration : IEntityTypeConfiguration<DeliveryTask>
 
     builder.Property(e => e.Id)
       .HasColumnName("Id")
-      .ValueGeneratedOnAdd()
+      .ValueGeneratedNever()
       .HasConversion(id => id.Value, value => DeliveryTaskId.From(value))
       .IsRequired();
 
