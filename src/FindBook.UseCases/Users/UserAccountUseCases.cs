@@ -26,6 +26,7 @@ public sealed record UserAccountDto(
 
 public sealed record ListUsersQuery() : IQuery<Result<IReadOnlyCollection<UserAccountDto>>>;
 public sealed record GetUserByIdQuery(UserAccountId UserId) : IQuery<Result<UserAccountDto>>;
+public sealed record GetUserByEmailQuery(EmailAddress Email) : IQuery<Result<UserAccountDto>>;
 public sealed record CreateUserCommand(PersonName FullName, EmailAddress Email, PasswordHash PasswordHash, AccountRole Role, PhoneNumber? PhoneNumber, LibraryId? ManagedLibraryId) : ICommand<Result<UserAccountDto>>;
 public sealed record UpdateUserCommand(UserAccountId UserId, PersonName FullName, EmailAddress Email, AccountRole Role, PhoneNumber? PhoneNumber, LibraryId? ManagedLibraryId) : ICommand<Result<UserAccountDto>>;
 public sealed record AddUserAddressCommand(UserAccountId UserId, PostalAddress Address, bool IsDefault) : ICommand<Result<UserAccountDto>>;
@@ -49,6 +50,16 @@ public sealed class GetUserByIdHandler(IReadRepository<UserAccount> repository)
   public async ValueTask<Result<UserAccountDto>> Handle(GetUserByIdQuery query, CancellationToken cancellationToken)
   {
     var user = await repository.FirstOrDefaultAsync(new UserAccountByIdSpec(query.UserId), cancellationToken);
+    return user is null ? Result.NotFound() : Result.Success(UserAccountMappings.Map(user));
+  }
+}
+
+public sealed class GetUserByEmailHandler(IReadRepository<UserAccount> repository)
+  : IQueryHandler<GetUserByEmailQuery, Result<UserAccountDto>>
+{
+  public async ValueTask<Result<UserAccountDto>> Handle(GetUserByEmailQuery query, CancellationToken cancellationToken)
+  {
+    var user = await repository.FirstOrDefaultAsync(new UserAccountByEmailSpec(query.Email), cancellationToken);
     return user is null ? Result.NotFound() : Result.Success(UserAccountMappings.Map(user));
   }
 }

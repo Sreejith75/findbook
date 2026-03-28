@@ -4,6 +4,7 @@ export type NavigationItem = {
   shortLabel: string;
   title: string;
   badge?: string;
+  children?: NavigationItem[];
 };
 
 export type NavigationSection = {
@@ -57,6 +58,38 @@ export const navigationSections: NavigationSection[] = [
         label: "Admin Panel",
         shortLabel: "AD",
         title: "Admin Panel",
+        children: [
+          {
+            href: "/admin/users",
+            label: "Users",
+            shortLabel: "US",
+            title: "Admin Users",
+          },
+          {
+            href: "/admin/categories",
+            label: "Categories",
+            shortLabel: "CT",
+            title: "Admin Categories",
+          },
+          {
+            href: "/admin/libraries",
+            label: "Libraries",
+            shortLabel: "LB",
+            title: "Admin Libraries",
+          },
+          {
+            href: "/admin/books",
+            label: "Books",
+            shortLabel: "BK",
+            title: "Admin Books",
+          },
+          {
+            href: "/admin/delivery",
+            label: "Delivery",
+            shortLabel: "DV",
+            title: "Admin Delivery Tasks",
+          },
+        ],
       },
     ],
   },
@@ -66,6 +99,9 @@ export const routeTitles = navigationSections.reduce<Record<string, string>>(
   (accumulator, section) => {
     for (const item of section.items) {
       accumulator[item.href] = item.title;
+      for (const child of item.children ?? []) {
+        accumulator[child.href] = child.title;
+      }
     }
 
     return accumulator;

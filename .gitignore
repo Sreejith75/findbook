@@ -66,3 +66,6 @@ next-env.d.ts
 .env.*
 !.env.example
 !.env*.example
+
+# Sensitive local auth material
+src/FindBook.Infrastructure/Auth/*.json

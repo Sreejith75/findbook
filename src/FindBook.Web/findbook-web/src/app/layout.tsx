@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 
+import "primeicons/primeicons.css";
+import "primereact/resources/themes/lara-light-amber/theme.css";
+import "primereact/resources/primereact.min.css";
+
+import { AppProviders } from "@/providers/app-providers";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Bibliotheca",
-  description: "Book rental and delivery experience with mock data.",
+  title: "FindBook",
+  description: "Book rental and delivery platform.",
 };
 
 export default function RootLayout({
@@ -14,7 +19,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

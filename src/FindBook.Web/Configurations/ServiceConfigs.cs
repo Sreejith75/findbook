@@ -8,7 +8,8 @@ public static class ServiceConfigs
 {
   public static IServiceCollection AddServiceConfigs(this IServiceCollection services, Microsoft.Extensions.Logging.ILogger logger, WebApplicationBuilder builder)
   {
-    services.AddInfrastructureServices(builder.Configuration, logger)
+    services.AddInfrastructureServices(builder.Configuration, logger, builder.Environment.ContentRootPath)
+            .AddFirebaseAuth(builder.Configuration, builder.Environment.ContentRootPath)
             .AddMediatorSourceGen(logger);
 
     if (builder.Environment.IsDevelopment())

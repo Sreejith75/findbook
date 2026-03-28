@@ -1,7 +1,3 @@
-"use client";
-
-import { useState } from "react";
-
 import { StatCard } from "@/components/shared/stat-card";
 import { ProfileManagementPanel } from "@/features/book-rental/components/profile-management-panel";
 import type { ProfileOverviewData } from "@/features/book-rental/types/book-rental.types";
@@ -11,7 +7,6 @@ type ProfileOverviewProps = {
 };
 
 export function ProfileOverview({ data }: ProfileOverviewProps) {
-  const [settings, setSettings] = useState(data.settings);
   const initials = data.user.fullName
     .split(" ")
     .filter(Boolean)
@@ -31,7 +26,7 @@ export function ProfileOverview({ data }: ProfileOverviewProps) {
             {data.user.email}
           </div>
           <div className="hero-panel-copy" style={{ fontSize: "13px" }}>
-            {data.joinedLabel} · {data.user.addresses[0]?.city ?? "No default city"}
+            {data.joinedLabel} · {data.user.addresses[0]?.city ?? "No default address"}
           </div>
         </div>
         <div className="profile-badge">{data.user.role}</div>
@@ -72,34 +67,34 @@ export function ProfileOverview({ data }: ProfileOverviewProps) {
         </div>
 
         <div className="chart-card">
-          <div className="chart-title">Notification Settings</div>
+          <div className="chart-title">Account Summary</div>
           <div className="settings-list">
-            {settings.map((setting) => (
-              <div className="settings-row" key={setting.id}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{setting.label}</div>
-                  <div className="subtle-text">{setting.description}</div>
+            <div className="settings-row">
+              <div>
+                <div style={{ fontWeight: 700 }}>Primary Location</div>
+                <div className="subtle-text">
+                  {data.user.addresses[0]
+                    ? `${data.user.addresses[0].city}, ${data.user.addresses[0].state}`
+                    : "No address saved yet"}
                 </div>
-                <button
-                  className={[
-                    "settings-toggle",
-                    setting.enabled ? "settings-toggle-on" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() =>
-                    setSettings((current) =>
-                      current.map((item) =>
-                        item.id === setting.id
-                          ? { ...item, enabled: !item.enabled }
-                          : item,
-                      ),
-                    )
-                  }
-                  type="button"
-                />
               </div>
-            ))}
+            </div>
+            <div className="settings-row">
+              <div>
+                <div style={{ fontWeight: 700 }}>Phone</div>
+                <div className="subtle-text">{data.user.phoneNumber ?? "No phone number saved"}</div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <div>
+                <div style={{ fontWeight: 700 }}>Default Address</div>
+                <div className="subtle-text">
+                  {data.user.addresses.find((address) => address.isDefault)
+                    ? `${data.user.addresses.find((address) => address.isDefault)?.street}, ${data.user.addresses.find((address) => address.isDefault)?.city}`
+                    : "Choose a default delivery address below"}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

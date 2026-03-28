@@ -9,7 +9,7 @@ public static class CategoryEndpoints
 {
   public static IEndpointRouteBuilder MapCategoryEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/categories").WithTags("Categories");
+    var group = app.MapGroup("/api/categories").WithTags("Categories").RequireAuthorization();
 
     group.MapGet("/", async Task<HttpResult> (IMediator mediator, CancellationToken cancellationToken) =>
       (await mediator.Send(new ListCategoriesQuery(), cancellationToken)).ToHttpResult(items => TypedResults.Ok(items.Select(MapResponse))));

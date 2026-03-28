@@ -11,7 +11,7 @@ public static class DeliveryTaskEndpoints
 {
   public static IEndpointRouteBuilder MapDeliveryTaskEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/delivery-tasks").WithTags("Delivery");
+    var group = app.MapGroup("/api/delivery-tasks").WithTags("Delivery").RequireAuthorization();
 
     group.MapGet("/", async Task<HttpResult> (int? deliveryPartnerAccountId, string? status, string? type, IMediator mediator, CancellationToken cancellationToken) =>
     {

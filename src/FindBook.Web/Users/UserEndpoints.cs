@@ -11,7 +11,7 @@ public static class UserEndpoints
 {
   public static IEndpointRouteBuilder MapUserEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/users").WithTags("Users");
+    var group = app.MapGroup("/api/users").WithTags("Users").RequireAuthorization();
 
     group.MapGet("/", async Task<HttpResult> (IMediator mediator, CancellationToken cancellationToken) =>
       (await mediator.Send(new ListUsersQuery(), cancellationToken)).ToHttpResult(users => TypedResults.Ok(users.Select(MapUserResponse))));

@@ -2,17 +2,19 @@ import "server-only";
 
 import http from "node:http";
 import https from "node:https";
+import { cookies } from "next/headers";
 
+import { AUTH_COOKIE_NAME } from "@/constants/auth";
 import { getEnv } from "@/constants/config";
 
 type BackendRequestOptions = {
-  body?: BodyInit | string;
+  body?: Buffer | string;
   contentType?: string;
   method?: "GET" | "POST" | "PUT" | "DELETE";
 };
 
 export type BackendResponse = {
-  body: string;
+  body: Buffer;
   contentType: string | null;
   status: number;
 };
@@ -24,6 +26,8 @@ export async function requestBackend(
   const { NEXT_PUBLIC_FINDBOOK_API_BASE_URL } = getEnv();
   const url = new URL(path, NEXT_PUBLIC_FINDBOOK_API_BASE_URL);
   const method = options.method ?? "GET";
+  const cookieStore = await cookies();
+  const authToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
   return new Promise<BackendResponse>((resolve, reject) => {
     const isHttps = url.protocol === "https:";
@@ -33,14 +37,14 @@ export async function requestBackend(
       isHttps
         ? {
             method,
-            headers: buildHeaders(options.contentType),
+            headers: buildHeaders(options.contentType, authToken),
             rejectUnauthorized: !(
               process.env.NODE_ENV !== "production" && url.hostname === "localhost"
             ),
           }
         : {
             method,
-            headers: buildHeaders(options.contentType),
+            headers: buildHeaders(options.contentType, authToken),
           },
       (response) => {
         const chunks: Buffer[] = [];
@@ -51,7 +55,7 @@ export async function requestBackend(
 
         response.on("end", () => {
           resolve({
-            body: Buffer.concat(chunks).toString("utf8"),
+            body: Buffer.concat(chunks),
             contentType: response.headers["content-type"] ?? null,
             status: response.statusCode ?? 500,
           });
@@ -69,13 +73,9 @@ export async function requestBackend(
   });
 }
 
-function buildHeaders(contentType?: string): Record<string, string> {
-  return contentType
-    ? {
-        Accept: "application/json",
-        "Content-Type": contentType,
-      }
-    : {
-        Accept: "application/json",
-      };
+function buildHeaders(contentType?: string, authToken?: string): Record<string, string> {
+  return {
+    ...(contentType ? { "Content-Type": contentType } : {}),
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+  };
 }

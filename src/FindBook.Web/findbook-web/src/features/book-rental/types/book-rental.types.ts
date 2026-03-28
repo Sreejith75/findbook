@@ -80,6 +80,13 @@ export type ApiBookReview = {
   updatedOn: string | null;
 };
 
+export type ApiAuthSession = {
+  id: ID;
+  fullName: string;
+  email: string;
+  role: string;
+};
+
 export type ApiAdminOverview = {
   totalUsers: number;
   totalLibraries: number;

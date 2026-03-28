@@ -1,11 +1,8 @@
 import "server-only";
 
-import http from "node:http";
-import https from "node:https";
-
+import { cache } from "react";
 import { z } from "zod";
 
-import { getEnv } from "@/constants/config";
 import {
   adminOverviewSchema,
   booksSchema,
@@ -23,6 +20,7 @@ import type {
   AdminTopLibrary,
   AdminTransaction,
   ApiAdminOverview,
+  ApiAuthSession,
   ApiBook,
   ApiBookReview,
   ApiCategory,
@@ -47,8 +45,8 @@ import type {
   RentalsOverviewData,
   ShellData,
 } from "@/features/book-rental/types/book-rental.types";
+import { requestBackend } from "@/lib/backend-api";
 
-const CURRENT_USER_ID = 2;
 const PRIMARY_ACCENTS = ["#e8f0fe", "#e8f5e9", "#fff3e0", "#fce4ec", "#e8eaf6", "#fffde7"];
 const PRIMARY_EMOJIS = ["📘", "📗", "📙", "📕", "📚", "🪄", "🧠", "🌍"];
 const NOTIFICATION_SETTINGS: NotificationSetting[] = [
@@ -73,11 +71,12 @@ const NOTIFICATION_SETTINGS: NotificationSetting[] = [
 ];
 
 export async function getShellData(): Promise<ShellData> {
+  const session = await getCurrentSession();
   const [user, rentals, deliveryTasks, reviews, books] = await Promise.all([
     getCurrentUser(),
-    listRentals(CURRENT_USER_ID),
+    listRentals(session.id),
     listDeliveryTasks(),
-    listReviews(undefined, CURRENT_USER_ID),
+    listReviews(undefined, session.id),
     listBooks(),
   ]);
 
@@ -86,7 +85,7 @@ export async function getShellData(): Promise<ShellData> {
 
   const activeTask = deliveryTasks.find((task) => {
     const rental = rentalLookup.get(task.rentalId);
-    return rental?.userAccountId === CURRENT_USER_ID && task.status !== "Completed";
+    return rental?.userAccountId === session.id && task.status !== "Completed";
   });
 
   const dueRental = rentals
@@ -118,7 +117,7 @@ export async function getShellData(): Promise<ShellData> {
       id: 3,
       isRead: true,
       message: `You have written ${reviews.length} review${reviews.length === 1 ? "" : "s"} so far.`,
-      timeAgo: "Profile insight",
+      timeAgo: "Account summary",
     },
   ];
 
@@ -131,13 +130,14 @@ export async function getShellData(): Promise<ShellData> {
 }
 
 export async function getHomeOverviewData(): Promise<HomeOverviewData> {
+  const session = await getCurrentSession();
   const [user, books, categories, rentals, deliveryTasks, reviews, libraries] = await Promise.all([
     getCurrentUser(),
     listBooks(),
     listCategories(),
-    listRentals(CURRENT_USER_ID),
+    listRentals(session.id),
     listDeliveryTasks(),
-    listReviews(undefined, CURRENT_USER_ID),
+    listReviews(undefined, session.id),
     listLibraries(),
   ]);
 
@@ -168,7 +168,7 @@ export async function getHomeOverviewData(): Promise<HomeOverviewData> {
 
   const activeDeliveryTask = deliveryTasks.find((task) => {
     const rental = rentalsById.get(task.rentalId);
-    return rental?.userAccountId === CURRENT_USER_ID && task.status !== "Completed";
+    return rental?.userAccountId === session.id && task.status !== "Completed";
   });
 
   const deliverySteps = buildDeliverySteps(activeDeliveryTask);
@@ -242,16 +242,17 @@ export async function getCatalogOverviewData(searchQuery?: string): Promise<Cata
     books: books.map((book) => mapBookView(book, categories.find((category) => category.id === book.categoryId)?.name)),
     filterOptions: ["All Genres", ...categories.map((category) => category.name)],
     searchQuery,
-    totalBooksLabel: `${books.length.toLocaleString()} books live from the current catalog API.`,
+    totalBooksLabel: `${books.length.toLocaleString()} books available across connected libraries.`,
     user,
   };
 }
 
 export async function getRentalsOverviewData(): Promise<RentalsOverviewData> {
+  const session = await getCurrentSession();
   const [rentals, books, reviews] = await Promise.all([
-    listRentals(CURRENT_USER_ID),
+    listRentals(session.id),
     listBooks(),
-    listReviews(undefined, CURRENT_USER_ID),
+    listReviews(undefined, session.id),
   ]);
   const bookLookup = createLookup(books);
 
@@ -265,9 +266,10 @@ export async function getRentalsOverviewData(): Promise<RentalsOverviewData> {
 }
 
 export async function getDeliveriesOverviewData(): Promise<DeliveriesOverviewData> {
+  const session = await getCurrentSession();
   const [tasks, rentals, books, users] = await Promise.all([
     listDeliveryTasks(),
-    listRentals(CURRENT_USER_ID),
+    listRentals(session.id),
     listBooks(),
     listUsers(),
   ]);
@@ -306,12 +308,13 @@ export async function getLibrariesOverviewData(): Promise<LibrariesOverviewData>
 }
 
 export async function getProfileOverviewData(): Promise<ProfileOverviewData> {
+  const session = await getCurrentSession();
   const [user, rentals, books, categories, reviews] = await Promise.all([
     getCurrentUser(),
-    listRentals(CURRENT_USER_ID),
+    listRentals(session.id),
     listBooks(),
     listCategories(),
-    listReviews(undefined, CURRENT_USER_ID),
+    listReviews(undefined, session.id),
   ]);
 
   const bookLookup = createLookup(books);
@@ -381,7 +384,7 @@ export async function getProfileOverviewData(): Promise<ProfileOverviewData> {
 
   return {
     favoriteGenres,
-    joinedLabel: "Member since seeded development profile",
+    joinedLabel: "Profile overview",
     profileStats,
     settings: NOTIFICATION_SETTINGS,
     user,
@@ -459,8 +462,18 @@ export async function getAdminOverviewData(): Promise<AdminOverviewData> {
 }
 
 async function getCurrentUser(): Promise<ApiUser> {
-  return requestJson(`/api/users/${CURRENT_USER_ID}`, userSchema);
+  const session = await getCurrentSession();
+  return requestJson(`/api/users/${session.id}`, userSchema);
 }
+
+const getCurrentSession = cache(async (): Promise<ApiAuthSession> => {
+  return requestJson("/api/auth/session", z.object({
+    id: z.number().int().positive(),
+    fullName: z.string(),
+    email: z.string(),
+    role: z.string(),
+  }));
+});
 
 async function listUsers(): Promise<ApiUser[]> {
   return requestJson("/api/users", usersSchema);
@@ -516,66 +529,21 @@ async function getAdminOverview(): Promise<ApiAdminOverview> {
 }
 
 async function requestJson<T>(path: string, schema: z.ZodType<T>): Promise<T> {
-  const { NEXT_PUBLIC_FINDBOOK_API_BASE_URL } = getEnv();
-  const url = new URL(path, NEXT_PUBLIC_FINDBOOK_API_BASE_URL);
-  const body = await requestText(url);
+  const response = await requestBackend(path, { method: "GET" });
+  const bodyText = response.body.toString("utf8");
+
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`Request to ${path} failed with status ${response.status}: ${bodyText}`);
+  }
 
   let parsedBody: unknown;
   try {
-    parsedBody = JSON.parse(body);
+    parsedBody = JSON.parse(bodyText);
   } catch (error) {
-    throw new Error(`Invalid JSON received from ${url.toString()}: ${String(error)}`);
+    throw new Error(`Invalid JSON received from ${path}: ${String(error)}`);
   }
 
   return schema.parse(parsedBody);
-}
-
-function requestText(url: URL): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const isHttps = url.protocol === "https:";
-    const transport = isHttps ? https : http;
-    const request = transport.request(
-      url,
-      isHttps
-        ? {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-            rejectUnauthorized: !(
-              process.env.NODE_ENV !== "production" && url.hostname === "localhost"
-            ),
-          }
-        : {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-          },
-      (response) => {
-        const chunks: Buffer[] = [];
-
-        response.on("data", (chunk) => {
-          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-        });
-
-        response.on("end", () => {
-          const text = Buffer.concat(chunks).toString("utf8");
-          const status = response.statusCode ?? 500;
-
-          if (status < 200 || status >= 300) {
-            reject(new Error(`Request to ${url.toString()} failed with status ${status}: ${text}`));
-            return;
-          }
-
-          resolve(text);
-        });
-      },
-    );
-
-    request.on("error", reject);
-    request.end();
-  });
 }
 
 function mapBookView(book: ApiBook, categoryName?: string): Book {

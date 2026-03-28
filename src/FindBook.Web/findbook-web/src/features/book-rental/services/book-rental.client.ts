@@ -10,15 +10,17 @@ import type {
   ProfileFormInput,
   ReviewFormInput,
 } from "@/features/book-rental/schemas/book-rental-forms.schema";
-import type { ApiSavedAddress, ApiUser } from "@/features/book-rental/types/book-rental.types";
+import type { ApiAuthSession, ApiSavedAddress, ApiUser } from "@/features/book-rental/types/book-rental.types";
 
-const CURRENT_USER_ID = 2;
+let cachedSession: ApiAuthSession | null = null;
 
 export async function createRental(input: {
   address: ApiSavedAddress;
   bookId: number;
   libraryId: number;
 }) {
+  const session = await getAuthenticatedSession();
+
   return requestJson("/api/v1/rentals", {
     deliveryAddress: {
       city: input.address.city,
@@ -30,7 +32,7 @@ export async function createRental(input: {
     bookId: input.bookId,
     libraryId: input.libraryId,
     rentedOn: new Date().toISOString().slice(0, 10),
-    userAccountId: CURRENT_USER_ID,
+    userAccountId: session.id,
   });
 }
 
@@ -41,18 +43,22 @@ export async function requestRentalReturn(rentalId: number) {
 }
 
 export async function createReview(rentalBookId: number, input: ReviewFormInput) {
+  const session = await getAuthenticatedSession();
+
   return requestJson("/api/v1/reviews", {
     bookId: rentalBookId,
     content: input.content,
     createdOn: new Date().toISOString(),
     rating: input.rating,
-    reviewerAccountId: CURRENT_USER_ID,
+    reviewerAccountId: session.id,
     title: input.title,
   });
 }
 
 export async function updateProfile(input: ProfileFormInput & { managedLibraryId?: number | null }) {
-  return requestJson(`/api/v1/users/${CURRENT_USER_ID}`, {
+  const session = await getAuthenticatedSession();
+
+  return requestJson(`/api/v1/users/${session.id}`, {
     email: input.email,
     fullName: input.fullName,
     managedLibraryId: input.managedLibraryId ?? null,
@@ -83,19 +89,23 @@ export async function updateUser(userId: number, input: AdminUserFormInput) {
 }
 
 export async function addAddress(input: AddressFormInput): Promise<ApiUser> {
-  return requestJson(`/api/v1/users/${CURRENT_USER_ID}/addresses`, input);
+  const session = await getAuthenticatedSession();
+  return requestJson(`/api/v1/users/${session.id}/addresses`, input);
 }
 
 export async function updateAddress(addressId: number, input: AddressFormInput): Promise<ApiUser> {
-  return requestJson(`/api/v1/users/${CURRENT_USER_ID}/addresses/${addressId}`, input, "PUT");
+  const session = await getAuthenticatedSession();
+  return requestJson(`/api/v1/users/${session.id}/addresses/${addressId}`, input, "PUT");
 }
 
 export async function deleteAddress(addressId: number) {
-  return requestJson(`/api/v1/users/${CURRENT_USER_ID}/addresses/${addressId}`, undefined, "DELETE");
+  const session = await getAuthenticatedSession();
+  return requestJson(`/api/v1/users/${session.id}/addresses/${addressId}`, undefined, "DELETE");
 }
 
 export async function setDefaultAddress(addressId: number): Promise<ApiUser> {
-  return requestJson(`/api/v1/users/${CURRENT_USER_ID}/addresses/${addressId}/default`, {}, "POST");
+  const session = await getAuthenticatedSession();
+  return requestJson(`/api/v1/users/${session.id}/addresses/${addressId}/default`, {}, "POST");
 }
 
 export async function createCategory(input: CategoryFormInput) {
@@ -120,6 +130,22 @@ export async function createBook(input: BookFormInput) {
 
 export async function updateBook(bookId: number, input: BookFormInput) {
   return requestJson(`/api/v1/books/${bookId}`, normalizeBookPayload(input), "PUT");
+}
+
+export async function uploadBookCover(bookId: number, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`/api/v1/books/${bookId}/cover`, {
+    body: formData,
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
+  }
+
+  return response.json();
 }
 
 export async function createDeliveryTask(input: {
@@ -147,6 +173,25 @@ export async function completeDeliveryTask(taskId: number) {
 
 export async function failDeliveryTask(taskId: number) {
   return requestJson(`/api/v1/delivery-tasks/${taskId}/fail`, {});
+}
+
+export function resetAuthenticatedSessionCache() {
+  cachedSession = null;
+}
+
+async function getAuthenticatedSession() {
+  if (cachedSession) {
+    return cachedSession;
+  }
+
+  const response = await fetch("/api/auth/session");
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
+  }
+
+  cachedSession = await response.json() as ApiAuthSession;
+  return cachedSession;
 }
 
 async function requestJson(path: string, body?: unknown, method: "POST" | "PUT" | "DELETE" = "POST") {
@@ -206,7 +251,7 @@ function normalizeBookPayload(input: BookFormInput) {
     categoryId: input.categoryId,
     coverImageReference: input.coverImageReference || null,
     description: input.description || null,
-    isbn: input.isbn,
+    isbn: input.isbn.trim(),
     libraryId: input.libraryId,
     title: input.title,
     totalCopies: input.totalCopies,

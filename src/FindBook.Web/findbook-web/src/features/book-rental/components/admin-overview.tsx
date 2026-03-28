@@ -1,5 +1,5 @@
 import { StatCard } from "@/components/shared/stat-card";
-import { AdminManagementPanel } from "@/features/book-rental/components/admin-management-panel";
+import { PageHeader } from "@/components/shared/page-header";
 import type { AdminOverviewData } from "@/features/book-rental/types/book-rental.types";
 
 type AdminOverviewProps = {
@@ -41,6 +41,11 @@ export function AdminOverview({ data }: AdminOverviewProps) {
 
   return (
     <div>
+      <PageHeader
+        description="Monitor the health of the rental platform, then jump into users, books, libraries, categories, or delivery tasks from the admin section in the sidebar."
+        title="Admin Overview"
+      />
+
       <section className="stats-grid">
         {adminStats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
@@ -91,7 +96,7 @@ export function AdminOverview({ data }: AdminOverviewProps) {
 
       <section className="page-section">
         <div className="section-header">
-          <h2 className="section-title">Recent Transactions</h2>
+          <h2 className="section-title">Recent Rental Activity</h2>
         </div>
         <div className="table-card">
           <table>
@@ -122,8 +127,6 @@ export function AdminOverview({ data }: AdminOverviewProps) {
           </table>
         </div>
       </section>
-
-      <AdminManagementPanel data={data} />
     </div>
   );
 }

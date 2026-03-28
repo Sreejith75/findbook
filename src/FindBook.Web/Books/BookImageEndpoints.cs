@@ -18,7 +18,8 @@ public static class BookImageEndpoints
   public static IEndpointRouteBuilder MapBookImageEndpoints(this IEndpointRouteBuilder app)
   {
     var group = app.MapGroup("/api/books")
-      .WithTags("Books");
+      .WithTags("Books")
+      .RequireAuthorization();
 
     group.MapPost("/{bookId:int:min(1)}/cover",
       async Task<Results<Ok<BookImageUploadResponse>, NotFound, ValidationProblem>> (

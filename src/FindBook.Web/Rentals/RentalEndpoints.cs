@@ -13,7 +13,7 @@ public static class RentalEndpoints
 {
   public static IEndpointRouteBuilder MapRentalEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/rentals").WithTags("Rentals");
+    var group = app.MapGroup("/api/rentals").WithTags("Rentals").RequireAuthorization();
 
     group.MapGet("/", async Task<HttpResult> (int? userAccountId, int? bookId, string? status, IMediator mediator, CancellationToken cancellationToken) =>
     {

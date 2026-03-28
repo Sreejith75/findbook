@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const isbnPattern = /^[0-9Xx-]{10,17}$/;
+
 export const addressFormSchema = z.object({
   city: z.string().min(2, "City is required"),
   country: z.string().min(2, "Country is required"),
@@ -48,7 +50,11 @@ export const bookFormSchema = z.object({
   categoryId: z.coerce.number().int().positive("Choose a category"),
   coverImageReference: z.string().optional(),
   description: z.string().optional(),
-  isbn: z.string().min(10, "ISBN is required"),
+  isbn: z
+    .string()
+    .trim()
+    .min(1, "ISBN is required")
+    .regex(isbnPattern, "ISBN format is invalid"),
   libraryId: z.coerce.number().int().positive("Choose a library"),
   title: z.string().min(2, "Title is required"),
   totalCopies: z.coerce.number().int().min(1),

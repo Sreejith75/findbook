@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { FileUpload, type FileUploadSelectEvent } from "primereact/fileupload";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import {
   createUser,
   failDeliveryTask,
   markDeliveryTaskInTransit,
+  uploadBookCover,
   updateBook,
   updateCategory,
   updateLibrary,
@@ -56,6 +58,39 @@ export function AdminManagementPanel({ data }: AdminManagementPanelProps) {
       <DeliveryTaskManager data={data} />
     </section>
   );
+}
+
+export function AdminUserManagementPanel({
+  libraries,
+  users,
+}: Pick<AdminOverviewData, "libraries" | "users">) {
+  return <UserManager libraries={libraries} users={users} />;
+}
+
+export function AdminCategoryManagementPanel({
+  categories,
+}: Pick<AdminOverviewData, "categories">) {
+  return <CategoryManager categories={categories} />;
+}
+
+export function AdminLibraryManagementPanel({
+  libraries,
+}: Pick<AdminOverviewData, "libraries">) {
+  return <LibraryManager libraries={libraries} />;
+}
+
+export function AdminBookManagementPanel({
+  books,
+  categories,
+  libraries,
+}: Pick<AdminOverviewData, "books" | "categories" | "libraries">) {
+  return <BookManager books={books} categories={categories} libraries={libraries} />;
+}
+
+export function AdminDeliveryTaskManagementPanel({
+  data,
+}: AdminManagementPanelProps) {
+  return <DeliveryTaskManager data={data} />;
 }
 
 function UserManager({
@@ -332,6 +367,8 @@ function BookManager({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<number | "new">("new");
+  const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const form = useAppForm({
     defaultValues: emptyBookValues(),
@@ -340,18 +377,36 @@ function BookManager({
 
   const selectedBook = selectedId === "new" ? null : books.find((item) => item.id === selectedId) ?? null;
 
+  useEffect(() => {
+    if (!selectedCoverFile) {
+      setCoverPreviewUrl(selectedBook ? `/api/v1/books/${selectedBook.id}/cover` : null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedCoverFile);
+    setCoverPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedBook, selectedCoverFile]);
+
   const submit = form.handleSubmit(async (data) => {
     setServerError(null);
 
     try {
-      if (selectedBook) {
-        await updateBook(selectedBook.id, data as unknown as BookFormInput);
-      } else {
-        await createBook(data as unknown as BookFormInput);
+      const savedBook = selectedBook
+        ? await updateBook(selectedBook.id, data as unknown as BookFormInput)
+        : await createBook(data as unknown as BookFormInput);
+
+      if (selectedCoverFile) {
+        await uploadBookCover(savedBook.id, selectedCoverFile);
       }
 
       startTransition(() => {
         setSelectedId("new");
+        setSelectedCoverFile(null);
+        setCoverPreviewUrl(null);
         form.reset(emptyBookValues());
         router.refresh();
       });
@@ -371,6 +426,7 @@ function BookManager({
             const nextValue = event.target.value;
             const book = books.find((item) => item.id === Number(nextValue));
             setSelectedId(nextValue === "new" ? "new" : Number(nextValue));
+            setSelectedCoverFile(null);
             form.reset(
               book
                 ? {
@@ -427,11 +483,57 @@ function BookManager({
         </label>
         <Input error={form.formState.errors.totalCopies?.message} label="Total Copies" type="number" {...form.register("totalCopies", { valueAsNumber: true })} />
         <Input error={form.formState.errors.availableCopies?.message} label="Available Copies" type="number" {...form.register("availableCopies", { valueAsNumber: true })} />
-        <Input label="Cover Reference" {...form.register("coverImageReference")} />
+        <div className="field">
+          <span className="field-label">Cover Upload</span>
+          {coverPreviewUrl ? (
+            <div className="book-cover-upload-preview">
+              <img
+                alt={selectedBook ? `${selectedBook.title} cover` : "Selected cover preview"}
+                className="book-cover-upload-image"
+                src={coverPreviewUrl}
+              />
+            </div>
+          ) : (
+            <div className="book-cover-upload-empty">
+              Upload a JPEG, PNG, or WEBP cover image up to 5 MB.
+            </div>
+          )}
+          <FileUpload
+            accept="image/jpeg,image/png,image/webp"
+            cancelOptions={{ className: "book-cover-uploader-hidden" }}
+            chooseLabel={selectedCoverFile ? "Replace Cover" : "Select Cover"}
+            className="book-cover-uploader"
+            customUpload
+            key={`cover-${selectedId}-${selectedCoverFile?.name ?? "empty"}`}
+            maxFileSize={5 * 1024 * 1024}
+            mode="advanced"
+            multiple={false}
+            name="file"
+            onClear={() => {
+              setSelectedCoverFile(null);
+            }}
+            onSelect={(event: FileUploadSelectEvent) => {
+              const nextFile = event.files[0];
+              setSelectedCoverFile(nextFile instanceof File ? nextFile : null);
+            }}
+            uploadOptions={{ className: "book-cover-uploader-hidden" }}
+          />
+          <span className="field-help">
+            {selectedBook
+              ? "Choose a file to replace the current cover after saving."
+              : "For a new book, the cover will upload right after the book record is created."}
+          </span>
+        </div>
         <Textarea error={form.formState.errors.description?.message} label="Description" rows={4} {...form.register("description")} />
         {serverError ? <div className="form-alert">{serverError}</div> : null}
         <Button disabled={isPending || form.formState.isSubmitting} type="submit">
-          {selectedBook ? "Update Book" : "Create Book"}
+          {selectedBook
+            ? selectedCoverFile
+              ? "Update Book and Cover"
+              : "Update Book"
+            : selectedCoverFile
+              ? "Create Book and Upload Cover"
+              : "Create Book"}
         </Button>
       </form>
     </section>

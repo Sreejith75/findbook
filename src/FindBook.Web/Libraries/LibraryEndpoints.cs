@@ -10,7 +10,7 @@ public static class LibraryEndpoints
 {
   public static IEndpointRouteBuilder MapLibraryEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/libraries").WithTags("Libraries");
+    var group = app.MapGroup("/api/libraries").WithTags("Libraries").RequireAuthorization();
 
     group.MapGet("/", async Task<HttpResult> (IMediator mediator, CancellationToken cancellationToken) =>
       (await mediator.Send(new ListLibrariesQuery(), cancellationToken)).ToHttpResult(items => TypedResults.Ok(items.Select(MapResponse))));

@@ -11,7 +11,7 @@ public static class BookReviewEndpoints
 {
   public static IEndpointRouteBuilder MapBookReviewEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/reviews").WithTags("Reviews");
+    var group = app.MapGroup("/api/reviews").WithTags("Reviews").RequireAuthorization();
 
     group.MapGet("/", async Task<HttpResult> (int? bookId, int? reviewerAccountId, IMediator mediator, CancellationToken cancellationToken) =>
       (await mediator.Send(new ListBookReviewsQuery(bookId.HasValue ? BookId.From(bookId.Value) : null, reviewerAccountId.HasValue ? UserAccountId.From(reviewerAccountId.Value) : null), cancellationToken))

@@ -11,7 +11,7 @@ public static class BookEndpoints
 {
   public static IEndpointRouteBuilder MapBookEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/books").WithTags("Books");
+    var group = app.MapGroup("/api/books").WithTags("Books").RequireAuthorization();
 
     group.MapGet("/", async Task<HttpResult> (string? q, int? libraryId, int? categoryId, bool? availableOnly, IMediator mediator, CancellationToken cancellationToken) =>
       (await mediator.Send(new ListBooksQuery(q, libraryId.HasValue ? LibraryId.From(libraryId.Value) : null, categoryId.HasValue ? CategoryId.From(categoryId.Value) : null, availableOnly == true), cancellationToken))

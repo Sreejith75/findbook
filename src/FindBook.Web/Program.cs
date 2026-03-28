@@ -1,4 +1,5 @@
 ﻿using FindBook.Web.Admin;
+using FindBook.Web.Auth;
 using FindBook.Web.Books;
 using FindBook.Web.Categories;
 using FindBook.Web.Configurations;
@@ -35,6 +36,31 @@ builder.Services.AddSwaggerGen(options =>
     Version = "v1",
     Description = "HTTP API for the FindBook book rental and delivery platform."
   });
+
+  options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+  {
+    Description = "Enter a Firebase ID token as: Bearer {token}",
+    In = ParameterLocation.Header,
+    Name = "Authorization",
+    Scheme = "Bearer",
+    Type = SecuritySchemeType.Http,
+    BearerFormat = "JWT"
+  });
+
+  options.AddSecurityRequirement(new OpenApiSecurityRequirement
+  {
+    {
+      new OpenApiSecurityScheme
+      {
+        Reference = new OpenApiReference
+        {
+          Id = "Bearer",
+          Type = ReferenceType.SecurityScheme
+        }
+      },
+      Array.Empty<string>()
+    }
+  });
 });
 
 var app = builder.Build();
@@ -42,6 +68,7 @@ var app = builder.Build();
 await app.UseAppMiddlewareAndSeedDatabase();
 
 app.MapDefaultEndpoints(); // Aspire health checks and metrics
+app.MapFirebaseAuthEndpoints();
 app.MapUserEndpoints();
 app.MapLibraryEndpoints();
 app.MapCategoryEndpoints();

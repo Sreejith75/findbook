@@ -24,7 +24,7 @@ export function ShellTopbar({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") ?? "");
 
-  const pageTitle = routeTitles[pathname] ?? "Bibliotheca";
+  const pageTitle = routeTitles[pathname] ?? "FindBook";
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -100,9 +100,6 @@ export function ShellTopbar({
           ) : null}
         </div>
 
-        <button className="topbar-icon-button" type="button">
-          Settings
-        </button>
       </div>
     </header>
   );
