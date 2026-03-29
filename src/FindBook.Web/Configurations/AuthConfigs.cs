@@ -1,5 +1,8 @@
 using FindBook.Infrastructure.Auth;
+using FindBook.Web.Auth;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
 namespace FindBook.Web.Configurations;
@@ -38,7 +41,18 @@ public static class AuthConfigs
         };
       });
 
-    services.AddAuthorization();
+    services.AddScoped<ICurrentAppUserAccessor, CurrentAppUserAccessor>();
+    services.AddTransient<IClaimsTransformation, LocalUserClaimsTransformation>();
+    services.AddScoped<IAuthorizationHandler, FindBookAccessHandler>();
+
+    services.AddAuthorization(options =>
+    {
+      options.AddPolicy(FindBookPolicies.Authenticated, policy => policy.AddRequirements(new FindBookAccessRequirement(FindBookAccessLevel.Authenticated)));
+      options.AddPolicy(FindBookPolicies.UserOrHigher, policy => policy.AddRequirements(new FindBookAccessRequirement(FindBookAccessLevel.UserOrHigher)));
+      options.AddPolicy(FindBookPolicies.DeliveryPartnerOrHigher, policy => policy.AddRequirements(new FindBookAccessRequirement(FindBookAccessLevel.DeliveryPartnerOrHigher)));
+      options.AddPolicy(FindBookPolicies.Admin, policy => policy.AddRequirements(new FindBookAccessRequirement(FindBookAccessLevel.Admin)));
+      options.AddPolicy(FindBookPolicies.SuperAdmin, policy => policy.AddRequirements(new FindBookAccessRequirement(FindBookAccessLevel.SuperAdmin)));
+    });
 
     return services;
   }

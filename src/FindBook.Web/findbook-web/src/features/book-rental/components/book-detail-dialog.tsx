@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import type { Book } from "@/features/book-rental/types/book-rental.types";
 
@@ -16,9 +18,19 @@ export function BookDetailDialog({
   onClose,
   onRent,
 }: BookDetailDialogProps) {
+  const [hasImageError, setHasImageError] = useState(false);
+
   if (!book) {
     return null;
   }
+
+  const showCoverImage = Boolean(book.coverImageUrl) && !hasImageError;
+  const availabilityLabel =
+    typeof book.availableCopies === "number"
+      ? `${book.availableCopies} copies available`
+      : book.isAvailable
+        ? "Available for rent"
+        : "Currently unavailable";
 
   return (
     <div className="book-dialog" onClick={onClose}>
@@ -27,7 +39,22 @@ export function BookDetailDialog({
           <button className="book-dialog-close" onClick={onClose} type="button">
             X
           </button>
-          <div className="book-dialog-emoji">{book.emoji}</div>
+          {showCoverImage ? (
+            <img
+              alt={`Cover of ${book.title}`}
+              className="book-dialog-image"
+              onError={() => setHasImageError(true)}
+              src={book.coverImageUrl ?? undefined}
+            />
+          ) : (
+            <div className="book-dialog-emoji">{book.emoji}</div>
+          )}
+          <div className="book-dialog-overlay">
+            <span className="book-dialog-genre">{book.genre}</span>
+            <span className={`book-dialog-availability ${book.isAvailable ? "book-dialog-availability-open" : "book-dialog-availability-closed"}`}>
+              {availabilityLabel}
+            </span>
+          </div>
         </div>
         <div className="book-dialog-body">
           <h2 className="book-dialog-title">{book.title}</h2>
@@ -54,17 +81,22 @@ export function BookDetailDialog({
               <div className="book-dialog-stat-label">Per Week</div>
             </div>
           </div>
-          <Button
-            className="book-button"
-            disabled={isRequested || !book.isAvailable}
-            onClick={() => onRent(book)}
-          >
-            {isRequested
-              ? "Rental Requested"
-              : book.isAvailable
-                ? "Rent This Book - Free Delivery"
-                : "Currently Unavailable"}
-          </Button>
+          <div className="book-dialog-footer">
+            <div className="book-dialog-note">
+              Delivery details are confirmed before checkout, and active rentals appear in your workspace immediately.
+            </div>
+            <Button
+              className="book-button"
+              disabled={isRequested || !book.isAvailable}
+              onClick={() => onRent(book)}
+            >
+              {isRequested
+                ? "Rental Requested"
+                : book.isAvailable
+                  ? "Rent This Book"
+                  : "Currently Unavailable"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

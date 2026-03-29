@@ -312,6 +312,11 @@ namespace FindBook.Infrastructure.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("Email");
 
+                    b.Property<string>("FirebaseUid")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("FirebaseUid");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -340,6 +345,9 @@ namespace FindBook.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("FirebaseUid")
                         .IsUnique();
 
                     b.ToTable("UserAccounts", (string)null);

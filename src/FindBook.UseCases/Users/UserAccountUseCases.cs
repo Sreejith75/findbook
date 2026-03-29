@@ -20,6 +20,7 @@ public sealed record UserAccountDto(
   string FullName,
   string Email,
   string? PhoneNumber,
+  string? FirebaseUid,
   string Role,
   int? ManagedLibraryId,
   IReadOnlyCollection<SavedAddressDto> Addresses);
@@ -27,8 +28,10 @@ public sealed record UserAccountDto(
 public sealed record ListUsersQuery() : IQuery<Result<IReadOnlyCollection<UserAccountDto>>>;
 public sealed record GetUserByIdQuery(UserAccountId UserId) : IQuery<Result<UserAccountDto>>;
 public sealed record GetUserByEmailQuery(EmailAddress Email) : IQuery<Result<UserAccountDto>>;
-public sealed record CreateUserCommand(PersonName FullName, EmailAddress Email, PasswordHash PasswordHash, AccountRole Role, PhoneNumber? PhoneNumber, LibraryId? ManagedLibraryId) : ICommand<Result<UserAccountDto>>;
+public sealed record GetUserByFirebaseUidQuery(FirebaseUid FirebaseUid) : IQuery<Result<UserAccountDto>>;
+public sealed record CreateUserCommand(PersonName FullName, EmailAddress Email, PasswordHash PasswordHash, AccountRole Role, PhoneNumber? PhoneNumber, LibraryId? ManagedLibraryId, FirebaseUid? FirebaseUid = null) : ICommand<Result<UserAccountDto>>;
 public sealed record UpdateUserCommand(UserAccountId UserId, PersonName FullName, EmailAddress Email, AccountRole Role, PhoneNumber? PhoneNumber, LibraryId? ManagedLibraryId) : ICommand<Result<UserAccountDto>>;
+public sealed record BindUserFirebaseUidCommand(UserAccountId UserId, FirebaseUid FirebaseUid) : ICommand<Result<UserAccountDto>>;
 public sealed record AddUserAddressCommand(UserAccountId UserId, PostalAddress Address, bool IsDefault) : ICommand<Result<UserAccountDto>>;
 public sealed record UpdateUserAddressCommand(UserAccountId UserId, SavedAddressId AddressId, PostalAddress Address, bool IsDefault) : ICommand<Result<UserAccountDto>>;
 public sealed record SetDefaultUserAddressCommand(UserAccountId UserId, SavedAddressId AddressId) : ICommand<Result<UserAccountDto>>;
@@ -64,6 +67,16 @@ public sealed class GetUserByEmailHandler(IReadRepository<UserAccount> repositor
   }
 }
 
+public sealed class GetUserByFirebaseUidHandler(IReadRepository<UserAccount> repository)
+  : IQueryHandler<GetUserByFirebaseUidQuery, Result<UserAccountDto>>
+{
+  public async ValueTask<Result<UserAccountDto>> Handle(GetUserByFirebaseUidQuery query, CancellationToken cancellationToken)
+  {
+    var user = await repository.FirstOrDefaultAsync(new UserAccountByFirebaseUidSpec(query.FirebaseUid), cancellationToken);
+    return user is null ? Result.NotFound() : Result.Success(UserAccountMappings.Map(user));
+  }
+}
+
 public sealed class CreateUserHandler(
   IRepository<UserAccount> userRepository,
   IReadRepository<Library> libraryRepository)
@@ -91,7 +104,16 @@ public sealed class CreateUserHandler(
       }
     }
 
-    var user = new UserAccount(command.FullName, command.Email, command.PasswordHash, command.Role, command.PhoneNumber);
+    if (command.FirebaseUid.HasValue)
+    {
+      var duplicateFirebaseUser = await userRepository.FirstOrDefaultAsync(new UserAccountByFirebaseUidSpec(command.FirebaseUid.Value), cancellationToken);
+      if (duplicateFirebaseUser is not null)
+      {
+        return Result.Conflict("A user with the same Firebase identity already exists.");
+      }
+    }
+
+    var user = new UserAccount(command.FullName, command.Email, command.PasswordHash, command.Role, command.PhoneNumber, command.FirebaseUid);
     if (command.ManagedLibraryId.HasValue)
     {
       user.AssignManagedLibrary(command.ManagedLibraryId.Value);
@@ -141,6 +163,29 @@ public sealed class UpdateUserHandler(
     }
 
     await userRepository.UpdateAsync(user, cancellationToken);
+    return Result.Success(UserAccountMappings.Map(user));
+  }
+}
+
+public sealed class BindUserFirebaseUidHandler(IRepository<UserAccount> repository)
+  : ICommandHandler<BindUserFirebaseUidCommand, Result<UserAccountDto>>
+{
+  public async ValueTask<Result<UserAccountDto>> Handle(BindUserFirebaseUidCommand command, CancellationToken cancellationToken)
+  {
+    var user = await repository.FirstOrDefaultAsync(new UserAccountByIdSpec(command.UserId), cancellationToken);
+    if (user is null)
+    {
+      return Result.NotFound();
+    }
+
+    var duplicate = await repository.FirstOrDefaultAsync(new UserAccountByFirebaseUidSpec(command.FirebaseUid), cancellationToken);
+    if (duplicate is not null && duplicate.Id != command.UserId)
+    {
+      return Result.Conflict("A user with the same Firebase identity already exists.");
+    }
+
+    user.BindFirebaseIdentity(command.FirebaseUid);
+    await repository.UpdateAsync(user, cancellationToken);
     return Result.Success(UserAccountMappings.Map(user));
   }
 }
@@ -243,6 +288,7 @@ internal static class UserAccountMappings
       user.FullName.Value,
       user.Email.Value,
       user.PhoneNumber?.Value,
+      user.FirebaseUid?.Value,
       user.Role.Name,
       user.ManagedLibraryId?.Value,
       user.SavedAddresses

@@ -35,6 +35,16 @@ public class UserAccountConfiguration : IEntityTypeConfiguration<UserAccount>
 
     builder.HasIndex(e => e.Email).IsUnique();
 
+    builder.Property(e => e.FirebaseUid)
+      .HasColumnName("FirebaseUid")
+      .HasMaxLength(128)
+      .HasConversion(
+        v => v.HasValue ? v.Value.Value : null,
+        v => v != null ? FirebaseUid.From(v) : (FirebaseUid?)null)
+      .IsRequired(false);
+
+    builder.HasIndex(e => e.FirebaseUid).IsUnique();
+
     // PasswordHash (Vogen string value object)
     builder.Property(e => e.PasswordHash)
       .HasColumnName("PasswordHash")

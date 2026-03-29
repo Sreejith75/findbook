@@ -3,6 +3,7 @@ using FindBook.Core.LibraryInventory.CategoryAggregate;
 using FindBook.Core.LibraryInventory.LibraryAggregate;
 using FindBook.UseCases.Books;
 using FindBook.Web.Api;
+using FindBook.Web.Auth;
 using HttpResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace FindBook.Web.Books;
@@ -11,7 +12,7 @@ public static class BookEndpoints
 {
   public static IEndpointRouteBuilder MapBookEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/books").WithTags("Books").RequireAuthorization();
+    var group = app.MapGroup("/api/books").WithTags("Books").RequireAuthorization(FindBookPolicies.Authenticated);
 
     group.MapGet("/", async Task<HttpResult> (string? q, int? libraryId, int? categoryId, bool? availableOnly, IMediator mediator, CancellationToken cancellationToken) =>
       (await mediator.Send(new ListBooksQuery(q, libraryId.HasValue ? LibraryId.From(libraryId.Value) : null, categoryId.HasValue ? CategoryId.From(categoryId.Value) : null, availableOnly == true), cancellationToken))
@@ -36,7 +37,7 @@ public static class BookEndpoints
         parseResult.CoverImageReference), cancellationToken);
 
       return result.ToHttpResult(item => TypedResults.Created($"/api/books/{item.Id}", MapResponse(item)));
-    });
+    }).RequireAuthorization(FindBookPolicies.Admin);
 
     group.MapPut("/{id:int:min(1)}", async Task<HttpResult> (int id, UpsertBookRequest request, IMediator mediator, CancellationToken cancellationToken) =>
     {
@@ -55,7 +56,7 @@ public static class BookEndpoints
         parseResult.CoverImageReference), cancellationToken);
 
       return result.ToHttpResult(item => TypedResults.Ok(MapResponse(item)));
-    });
+    }).RequireAuthorization(FindBookPolicies.Admin);
 
     return app;
   }

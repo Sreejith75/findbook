@@ -1,4 +1,5 @@
 export type NavigationItem = {
+  allowedRoles?: string[];
   href: string;
   label: string;
   shortLabel: string;
@@ -29,6 +30,7 @@ export const navigationSections: NavigationSection[] = [
         shortLabel: "RT",
         title: "My Rentals",
         badge: "3",
+        allowedRoles: ["User"],
       },
       {
         href: "/deliveries",
@@ -58,36 +60,42 @@ export const navigationSections: NavigationSection[] = [
         label: "Admin Panel",
         shortLabel: "AD",
         title: "Admin Panel",
+        allowedRoles: ["Admin", "SuperAdmin"],
         children: [
           {
             href: "/admin/users",
             label: "Users",
             shortLabel: "US",
             title: "Admin Users",
+            allowedRoles: ["Admin", "SuperAdmin"],
           },
           {
             href: "/admin/categories",
             label: "Categories",
             shortLabel: "CT",
             title: "Admin Categories",
+            allowedRoles: ["Admin", "SuperAdmin"],
           },
           {
             href: "/admin/libraries",
             label: "Libraries",
             shortLabel: "LB",
             title: "Admin Libraries",
+            allowedRoles: ["Admin", "SuperAdmin"],
           },
           {
             href: "/admin/books",
             label: "Books",
             shortLabel: "BK",
             title: "Admin Books",
+            allowedRoles: ["Admin", "SuperAdmin"],
           },
           {
             href: "/admin/delivery",
             label: "Delivery",
             shortLabel: "DV",
             title: "Admin Delivery Tasks",
+            allowedRoles: ["Admin", "SuperAdmin"],
           },
         ],
       },

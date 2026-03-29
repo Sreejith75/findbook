@@ -47,6 +47,7 @@ export function RentBookDialog({
   }
 
   const isBusy = isSubmitting || isPending;
+  const hasSavedAddresses = user.addresses.length > 0;
 
   const onSubmit = handleSubmit(async (data) => {
     const selectedAddress = user.addresses.find((address) => address.id === Number(data.addressId));
@@ -67,8 +68,9 @@ export function RentBookDialog({
 
       startTransition(() => {
         onSuccess(book.id);
-        router.refresh();
         onClose();
+        router.push("/rentals");
+        router.refresh();
       });
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "Unable to create rental.");
@@ -91,9 +93,14 @@ export function RentBookDialog({
         </div>
 
         <form className="dialog-form" onSubmit={onSubmit}>
+          {!hasSavedAddresses ? (
+            <div className="form-alert">
+              Add a delivery address in your profile before creating a rental.
+            </div>
+          ) : null}
           <label className="field">
             <span className="field-label">Delivery Address</span>
-            <select className="field-input" disabled={isBusy} {...register("addressId", { valueAsNumber: true })}>
+            <select className="field-input" disabled={isBusy || !hasSavedAddresses} {...register("addressId", { valueAsNumber: true })}>
               {user.addresses.map((address) => (
                 <option key={address.id} value={address.id}>
                   {formatAddressOption(address)}
@@ -109,9 +116,22 @@ export function RentBookDialog({
             <Button disabled={isBusy} onClick={onClose} variant="outline">
               Cancel
             </Button>
-            <Button disabled={isBusy || !book.isAvailable} type="submit">
-              {isBusy ? "Submitting..." : "Confirm Rental"}
-            </Button>
+            {hasSavedAddresses ? (
+              <Button disabled={isBusy || !book.isAvailable} type="submit">
+                {isBusy ? "Submitting..." : "Confirm Rental"}
+              </Button>
+            ) : (
+              <Button
+                disabled={isBusy}
+                onClick={() => {
+                  onClose();
+                  router.push("/profile");
+                }}
+                type="button"
+              >
+                Go To Profile
+              </Button>
+            )}
           </div>
         </form>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -23,14 +23,30 @@ export function ShellSidebar({
 }: ShellSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { signOut, user } = useAuth();
+  const { session, signOut, user } = useAuth();
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+  const currentRole = session?.role ?? "User";
+  const visibleSections = useMemo(
+    () =>
+      navigationSections
+        .map((section) => ({
+          ...section,
+          items: section.items
+            .filter((item) => !item.allowedRoles || item.allowedRoles.includes(currentRole))
+            .map((item) => ({
+              ...item,
+              children: item.children?.filter((child) => !child.allowedRoles || child.allowedRoles.includes(currentRole)),
+            })),
+        }))
+        .filter((section) => section.items.length > 0),
+    [currentRole],
+  );
 
   useEffect(() => {
     setExpandedItems((current) => {
       const nextState = { ...current };
 
-      for (const section of navigationSections) {
+      for (const section of visibleSections) {
         for (const item of section.items) {
           if (!item.children?.length) {
             continue;
@@ -50,7 +66,7 @@ export function ShellSidebar({
 
       return nextState;
     });
-  }, [pathname]);
+  }, [pathname, visibleSections]);
 
   const resolvedName = user?.displayName || user?.email || userName;
   const resolvedInitials = resolvedName
@@ -73,7 +89,7 @@ export function ShellSidebar({
         </div>
 
         <div className="sidebar-nav">
-          {navigationSections.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.label} className="sidebar-section">
               <div className="sidebar-section-label">{section.label}</div>
               <div className="sidebar-items">
@@ -150,7 +166,7 @@ export function ShellSidebar({
           <div className="sidebar-user-avatar">{resolvedInitials}</div>
           <div className="sidebar-user-meta">
             <div className="sidebar-user-name">{resolvedName}</div>
-            <div className="sidebar-user-plan">Reader Account</div>
+            <div className="sidebar-user-plan">{session?.role ?? "Reader Account"}</div>
             <button
               className="sidebar-signout"
               onClick={async () => {

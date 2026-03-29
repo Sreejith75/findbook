@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import {
   adminOverviewSchema,
+  authSessionSchema,
   booksSchema,
   categoriesSchema,
   deliveryTasksSchema,
@@ -72,13 +73,9 @@ const NOTIFICATION_SETTINGS: NotificationSetting[] = [
 
 export async function getShellData(): Promise<ShellData> {
   const session = await getCurrentSession();
-  const [user, rentals, deliveryTasks, reviews, books] = await Promise.all([
-    getCurrentUser(),
-    listRentals(session.id),
-    listDeliveryTasks(),
-    listReviews(undefined, session.id),
-    listBooks(),
-  ]);
+  const [user, deliveryTasks, books] = await Promise.all([getCurrentUser(), listDeliveryTasks(), listBooks()]);
+  const rentals = session.role === "User" ? await listRentals() : [];
+  const reviews = session.role === "User" ? await listReviews() : [];
 
   const bookLookup = createLookup(books);
   const rentalLookup = createLookup(rentals);
@@ -135,9 +132,9 @@ export async function getHomeOverviewData(): Promise<HomeOverviewData> {
     getCurrentUser(),
     listBooks(),
     listCategories(),
-    listRentals(session.id),
+    listRentals(),
     listDeliveryTasks(),
-    listReviews(undefined, session.id),
+    listReviews(),
     listLibraries(),
   ]);
 
@@ -248,12 +245,7 @@ export async function getCatalogOverviewData(searchQuery?: string): Promise<Cata
 }
 
 export async function getRentalsOverviewData(): Promise<RentalsOverviewData> {
-  const session = await getCurrentSession();
-  const [rentals, books, reviews] = await Promise.all([
-    listRentals(session.id),
-    listBooks(),
-    listReviews(undefined, session.id),
-  ]);
+  const [rentals, books, reviews] = await Promise.all([listRentals(), listBooks(), listReviews()]);
   const bookLookup = createLookup(books);
 
   return {
@@ -267,11 +259,46 @@ export async function getRentalsOverviewData(): Promise<RentalsOverviewData> {
 
 export async function getDeliveriesOverviewData(): Promise<DeliveriesOverviewData> {
   const session = await getCurrentSession();
-  const [tasks, rentals, books, users] = await Promise.all([
-    listDeliveryTasks(),
-    listRentals(session.id),
+  const tasks = await listDeliveryTasks();
+
+  if (session.role === "DeliveryPartner") {
+    const assignedTasks = tasks.filter((task) => task.deliveryPartnerAccountId === session.id);
+    const activeTask = assignedTasks.find((task) => task.status !== "Completed") ?? null;
+
+    return {
+      viewMode: "delivery",
+      activeDelivery: activeTask
+        ? {
+            id: activeTask.id,
+            title: `Assigned ${activeTask.type.toLowerCase()} task`,
+            subtitle: `Rental #${activeTask.rentalId}`,
+            icon: activeTask.type === "Pickup" ? "RT" : "DV",
+            status: activeTask.status === "Failed" ? "failed" : activeTask.status === "Completed" ? "returned" : "transit",
+            date: formatDateTime(activeTask.completedAt ?? activeTask.assignedAt),
+          }
+        : null,
+      activeTitle: activeTask ? `Task #${activeTask.id}` : null,
+      activeSubtitle: activeTask ? `${activeTask.type} for rental #${activeTask.rentalId}` : null,
+      address: activeTask?.deliveryAddress ?? null,
+      history: assignedTasks
+        .slice()
+        .sort((left, right) => right.assignedAt.localeCompare(left.assignedAt))
+        .map((task) => ({
+          id: task.id,
+          title: `${task.type} task`,
+          subtitle: `Rental #${task.rentalId}`,
+          icon: task.type === "Pickup" ? "RT" : "DV",
+          status: task.status === "Failed" ? "failed" : task.status === "Completed" ? "returned" : "transit",
+          date: formatDateTime(task.completedAt ?? task.assignedAt),
+        })),
+      steps: buildDeliverySteps(activeTask),
+    };
+  }
+
+  const [rentals, books, users] = await Promise.all([
+    session.role === "User" ? listRentals() : listAllRentals(),
     listBooks(),
-    listUsers(),
+    session.role === "User" ? Promise.resolve<ApiUser[]>([]) : listUsers(),
   ]);
 
   const bookLookup = createLookup(books);
@@ -283,6 +310,7 @@ export async function getDeliveriesOverviewData(): Promise<DeliveriesOverviewDat
   const activeBook = activeRental ? bookLookup.get(activeRental.bookId) ?? null : null;
 
   return {
+    viewMode: session.role === "User" ? "reader" : "admin",
     activeDelivery: activeTask ? mapDeliveryHistoryItem(activeTask, activeRental, activeBook, usersById.get(activeTask.deliveryPartnerAccountId)) : null,
     activeTitle: activeBook?.title ?? null,
     activeSubtitle: activeBook ? `${activeBook.author} · ISBN ${activeBook.isbn}` : null,
@@ -311,10 +339,10 @@ export async function getProfileOverviewData(): Promise<ProfileOverviewData> {
   const session = await getCurrentSession();
   const [user, rentals, books, categories, reviews] = await Promise.all([
     getCurrentUser(),
-    listRentals(session.id),
+    session.role === "User" ? listRentals() : Promise.resolve<ApiRental[]>([]),
     listBooks(),
     listCategories(),
-    listReviews(undefined, session.id),
+    session.role === "User" ? listReviews() : listReviews(undefined, session.id),
   ]);
 
   const bookLookup = createLookup(books);
@@ -462,18 +490,11 @@ export async function getAdminOverviewData(): Promise<AdminOverviewData> {
 }
 
 async function getCurrentUser(): Promise<ApiUser> {
-  const session = await getCurrentSession();
-  return requestJson(`/api/users/${session.id}`, userSchema);
+  return requestJson("/api/me", userSchema);
 }
 
-const getCurrentSession = cache(async (): Promise<ApiAuthSession> => {
-  return requestJson("/api/auth/session", z.object({
-    id: z.number().int().positive(),
-    fullName: z.string(),
-    email: z.string(),
-    role: z.string(),
-  }));
-});
+export const getCurrentSession = cache(async (): Promise<ApiAuthSession> =>
+  requestJson("/api/auth/session", authSessionSchema));
 
 async function listUsers(): Promise<ApiUser[]> {
   return requestJson("/api/users", usersSchema);
@@ -497,8 +518,8 @@ async function listLibraries(): Promise<ApiLibrary[]> {
   return requestJson("/api/libraries", librariesSchema);
 }
 
-async function listRentals(userAccountId: number): Promise<ApiRental[]> {
-  return requestJson(`/api/rentals?userAccountId=${userAccountId}`, rentalsSchema);
+async function listRentals(): Promise<ApiRental[]> {
+  return requestJson("/api/rentals", rentalsSchema);
 }
 
 async function listAllRentals(): Promise<ApiRental[]> {
@@ -556,6 +577,7 @@ function mapBookView(book: ApiBook, categoryName?: string): Book {
     genre: categoryName ?? "General",
     accentColor: PRIMARY_ACCENTS[visualIndex],
     emoji: PRIMARY_EMOJIS[book.id % PRIMARY_EMOJIS.length],
+    coverImageUrl: `/api/v1/books/${book.id}/cover`,
     weeklyPrice: `INR ${20 + book.id * 5}`,
     pages: 220 + book.id * 48,
     rating: book.averageRating > 0 ? book.averageRating.toFixed(1) : "New",
@@ -713,6 +735,10 @@ function mapRentalStatus(status: string): RentalRecord["status"] {
 
   if (status === "PendingDelivery") {
     return "transit";
+  }
+
+  if (status === "ReturnRequested") {
+    return "returnRequested";
   }
 
   if (status === "Overdue") {

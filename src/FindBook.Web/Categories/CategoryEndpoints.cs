@@ -1,6 +1,7 @@
 using FindBook.Core.LibraryInventory.CategoryAggregate;
 using FindBook.UseCases.Categories;
 using FindBook.Web.Api;
+using FindBook.Web.Auth;
 using HttpResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace FindBook.Web.Categories;
@@ -9,7 +10,7 @@ public static class CategoryEndpoints
 {
   public static IEndpointRouteBuilder MapCategoryEndpoints(this IEndpointRouteBuilder app)
   {
-    var group = app.MapGroup("/api/categories").WithTags("Categories").RequireAuthorization();
+    var group = app.MapGroup("/api/categories").WithTags("Categories").RequireAuthorization(FindBookPolicies.Authenticated);
 
     group.MapGet("/", async Task<HttpResult> (IMediator mediator, CancellationToken cancellationToken) =>
       (await mediator.Send(new ListCategoriesQuery(), cancellationToken)).ToHttpResult(items => TypedResults.Ok(items.Select(MapResponse))));
@@ -25,7 +26,7 @@ public static class CategoryEndpoints
 
       var result = await mediator.Send(new CreateCategoryCommand(name), cancellationToken);
       return result.ToHttpResult(item => TypedResults.Created($"/api/categories/{item.Id}", MapResponse(item)));
-    });
+    }).RequireAuthorization(FindBookPolicies.Admin);
 
     group.MapPut("/{id:int:min(1)}", async Task<HttpResult> (int id, UpsertCategoryRequest request, IMediator mediator, CancellationToken cancellationToken) =>
     {
@@ -35,7 +36,7 @@ public static class CategoryEndpoints
 
       var result = await mediator.Send(new UpdateCategoryCommand(CategoryId.From(id), name), cancellationToken);
       return result.ToHttpResult(item => TypedResults.Ok(MapResponse(item)));
-    });
+    }).RequireAuthorization(FindBookPolicies.Admin);
 
     return app;
   }

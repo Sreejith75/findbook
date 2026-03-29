@@ -2,6 +2,8 @@ using FindBook.Core.Feedback.BookReviewAggregate;
 using FindBook.Core.Feedback.BookReviewAggregate.Specifications;
 using FindBook.Core.LibraryInventory.BookAggregate;
 using FindBook.Core.LibraryInventory.BookAggregate.Specifications;
+using FindBook.Core.Rental.RentalAggregate;
+using FindBook.Core.Rental.RentalAggregate.Specifications;
 using FindBook.Core.UserManagement.UserAccountAggregate;
 using FindBook.Core.UserManagement.UserAccountAggregate.Specifications;
 
@@ -33,6 +35,7 @@ public sealed class GetBookReviewByIdHandler(IReadRepository<BookReview> reposit
 public sealed class CreateBookReviewHandler(
   IRepository<BookReview> reviewRepository,
   IRepository<Book> bookRepository,
+  IReadRepository<Rental> rentalRepository,
   IReadRepository<UserAccount> userRepository)
   : ICommandHandler<CreateBookReviewCommand, Result<BookReviewDto>>
 {
@@ -48,6 +51,15 @@ public sealed class CreateBookReviewHandler(
     if (duplicate is not null)
     {
       return Result.Conflict("A review for this book by the same user already exists.");
+    }
+
+    var completedRentalExists = (await rentalRepository.ListAsync(
+      new ListRentalsSpec(command.ReviewerAccountId, command.BookId, RentalStatus.Returned),
+      cancellationToken)).Count != 0;
+
+    if (!completedRentalExists)
+    {
+      return Result.Error("A book can only be reviewed after it has been returned.");
     }
 
     var review = await reviewRepository.AddAsync(new BookReview(command.BookId, command.ReviewerAccountId, command.Rating, command.Title, command.Content, command.CreatedOn), cancellationToken);

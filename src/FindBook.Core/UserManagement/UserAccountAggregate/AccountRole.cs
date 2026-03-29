@@ -13,4 +13,22 @@ public class AccountRole : SmartEnum<AccountRole>
   {
     CanManageLibrary = canManageLibrary;
   }
+
+  public bool IsAdminLike => this == Admin || this == SuperAdmin;
+
+  public bool CanManageAdminRoles => this == SuperAdmin;
+
+  public bool CanManageOperationalUsers => IsAdminLike;
+
+  public bool CanAccessAdminWorkspace => IsAdminLike;
+
+  public bool CanManageCatalog => IsAdminLike;
+
+  public bool CanManageDeliveries => IsAdminLike;
+
+  public bool CanManageUsers => IsAdminLike;
+
+  public bool CanOperateDeliveryTasks => this == DeliveryPartner || IsAdminLike;
+
+  public bool CanViewDispatchQueue => this == DeliveryPartner || IsAdminLike;
 }

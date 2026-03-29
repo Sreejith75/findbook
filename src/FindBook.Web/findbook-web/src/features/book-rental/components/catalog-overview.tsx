@@ -10,8 +10,8 @@ export function CatalogOverview({ data }: CatalogOverviewProps) {
   return (
     <div>
       <PageHeader
-        description={data.totalBooksLabel}
-        title="Browse Catalog"
+        description="A curated catalog built for renting, returning, and rediscovering strong reads across partner libraries."
+        title="Discover Your Next Read"
       />
       <BookCollection
         books={data.books}

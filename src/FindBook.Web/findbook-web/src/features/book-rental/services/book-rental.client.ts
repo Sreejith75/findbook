@@ -19,7 +19,7 @@ export async function createRental(input: {
   bookId: number;
   libraryId: number;
 }) {
-  const session = await getAuthenticatedSession();
+  await getAuthenticatedSession();
 
   return requestJson("/api/v1/rentals", {
     deliveryAddress: {
@@ -32,7 +32,6 @@ export async function createRental(input: {
     bookId: input.bookId,
     libraryId: input.libraryId,
     rentedOn: new Date().toISOString().slice(0, 10),
-    userAccountId: session.id,
   });
 }
 
@@ -43,28 +42,45 @@ export async function requestRentalReturn(rentalId: number) {
 }
 
 export async function createReview(rentalBookId: number, input: ReviewFormInput) {
-  const session = await getAuthenticatedSession();
+  await getAuthenticatedSession();
 
   return requestJson("/api/v1/reviews", {
     bookId: rentalBookId,
     content: input.content,
     createdOn: new Date().toISOString(),
     rating: input.rating,
-    reviewerAccountId: session.id,
     title: input.title,
   });
 }
 
 export async function updateProfile(input: ProfileFormInput & { managedLibraryId?: number | null }) {
-  const session = await getAuthenticatedSession();
+  await getAuthenticatedSession();
 
-  return requestJson(`/api/v1/users/${session.id}`, {
+  return requestJson("/api/v1/me", {
     email: input.email,
     fullName: input.fullName,
-    managedLibraryId: input.managedLibraryId ?? null,
     phoneNumber: input.phoneNumber,
-    role: input.role,
-  });
+  }, "PUT");
+}
+
+export async function addAddress(input: AddressFormInput): Promise<ApiUser> {
+  await getAuthenticatedSession();
+  return requestJson("/api/v1/me/addresses", input);
+}
+
+export async function updateAddress(addressId: number, input: AddressFormInput): Promise<ApiUser> {
+  await getAuthenticatedSession();
+  return requestJson(`/api/v1/me/addresses/${addressId}`, input, "PUT");
+}
+
+export async function deleteAddress(addressId: number) {
+  await getAuthenticatedSession();
+  return requestJson(`/api/v1/me/addresses/${addressId}`, undefined, "DELETE");
+}
+
+export async function setDefaultAddress(addressId: number): Promise<ApiUser> {
+  await getAuthenticatedSession();
+  return requestJson(`/api/v1/me/addresses/${addressId}/default`, {}, "POST");
 }
 
 export async function createUser(input: AdminUserFormInput) {
@@ -86,26 +102,6 @@ export async function updateUser(userId: number, input: AdminUserFormInput) {
     phoneNumber: input.phoneNumber,
     role: input.role,
   }, "PUT");
-}
-
-export async function addAddress(input: AddressFormInput): Promise<ApiUser> {
-  const session = await getAuthenticatedSession();
-  return requestJson(`/api/v1/users/${session.id}/addresses`, input);
-}
-
-export async function updateAddress(addressId: number, input: AddressFormInput): Promise<ApiUser> {
-  const session = await getAuthenticatedSession();
-  return requestJson(`/api/v1/users/${session.id}/addresses/${addressId}`, input, "PUT");
-}
-
-export async function deleteAddress(addressId: number) {
-  const session = await getAuthenticatedSession();
-  return requestJson(`/api/v1/users/${session.id}/addresses/${addressId}`, undefined, "DELETE");
-}
-
-export async function setDefaultAddress(addressId: number): Promise<ApiUser> {
-  const session = await getAuthenticatedSession();
-  return requestJson(`/api/v1/users/${session.id}/addresses/${addressId}/default`, {}, "POST");
 }
 
 export async function createCategory(input: CategoryFormInput) {

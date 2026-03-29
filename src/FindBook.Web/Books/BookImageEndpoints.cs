@@ -1,5 +1,6 @@
 using FindBook.Core.LibraryInventory.BookAggregate;
 using FindBook.UseCases.Books;
+using FindBook.Web.Auth;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace FindBook.Web.Books;
@@ -19,7 +20,7 @@ public static class BookImageEndpoints
   {
     var group = app.MapGroup("/api/books")
       .WithTags("Books")
-      .RequireAuthorization();
+      .RequireAuthorization(FindBookPolicies.Authenticated);
 
     group.MapPost("/{bookId:int:min(1)}/cover",
       async Task<Results<Ok<BookImageUploadResponse>, NotFound, ValidationProblem>> (
@@ -64,7 +65,9 @@ public static class BookImageEndpoints
       .Produces<BookImageUploadResponse>()
       .ProducesValidationProblem()
       .Produces(StatusCodes.Status404NotFound)
-      .WithSummary("Upload or replace a book cover image");
+      .WithSummary("Upload or replace a book cover image")
+      .DisableAntiforgery()
+      .RequireAuthorization(FindBookPolicies.Admin);
 
     group.MapGet("/{bookId:int:min(1)}/cover",
       async Task<Results<FileContentHttpResult, NotFound>> (

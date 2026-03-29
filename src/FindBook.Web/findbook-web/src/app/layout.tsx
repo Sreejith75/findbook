@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 
 import "primeicons/primeicons.css";
 import "primereact/resources/themes/lara-light-amber/theme.css";
@@ -12,13 +13,19 @@ export const metadata: Metadata = {
   description: "Book rental and delivery platform.",
 };
 
+const plusJakartaSans = Plus_Jakarta_Sans({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-ui",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html className={plusJakartaSans.variable} lang="en">
       <body>
         <AppProviders>{children}</AppProviders>
       </body>

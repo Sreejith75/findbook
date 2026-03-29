@@ -6,10 +6,23 @@ type DeliveriesOverviewProps = {
 };
 
 export function DeliveriesOverview({ data }: DeliveriesOverviewProps) {
+  const bannerTitle =
+    data.viewMode === "delivery"
+      ? data.activeDelivery
+        ? "Assigned task in progress"
+        : "No assigned tasks right now"
+      : data.viewMode === "admin"
+        ? data.activeDelivery
+          ? "Delivery operations active"
+          : "No active delivery operations"
+        : data.activeDelivery
+          ? "1 delivery active"
+          : "No active deliveries";
+
   return (
     <div>
       <div className="delivery-banner">
-        <strong>{data.activeDelivery ? "1 delivery active" : "No active deliveries"}</strong>
+        <strong>{bannerTitle}</strong>
         <span>
           {data.activeDelivery?.title ?? "Completed deliveries and pickups will appear here."}
         </span>
@@ -111,8 +124,8 @@ export function DeliveriesOverview({ data }: DeliveriesOverviewProps) {
               )}
             </div>
             <div className="rental-actions" style={{ marginTop: "16px" }}>
-              <Button variant="outline">Change Address</Button>
-              <Button>Contact Rider</Button>
+              {data.viewMode === "reader" ? <Button variant="outline">Change Address</Button> : null}
+              <Button>{data.viewMode === "delivery" ? "Contact Dispatch" : "Contact Rider"}</Button>
             </div>
           </div>
         </div>

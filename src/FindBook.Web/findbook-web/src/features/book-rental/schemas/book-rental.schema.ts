@@ -106,6 +106,31 @@ export const adminOverviewSchema = z.object({
   totalReviews: z.number().int().nonnegative(),
 });
 
+export const authSessionSchema = z.object({
+  id: z.number().int().positive(),
+  fullName: z.string(),
+  email: z.string().email(),
+  role: z.string(),
+  managedLibraryId: z.number().int().positive().nullable().optional().default(null),
+  capabilities: z.object({
+    canAccessAdminWorkspace: z.boolean(),
+    canManageCatalog: z.boolean(),
+    canManageUsers: z.boolean(),
+    canManageDeliveries: z.boolean(),
+    canManageAdminRoles: z.boolean(),
+    canViewDispatchQueue: z.boolean(),
+    canOperateDeliveryTasks: z.boolean(),
+  }).optional().default({
+    canAccessAdminWorkspace: false,
+    canManageCatalog: false,
+    canManageUsers: false,
+    canManageDeliveries: false,
+    canManageAdminRoles: false,
+    canViewDispatchQueue: false,
+    canOperateDeliveryTasks: false,
+  }),
+});
+
 export const booksSchema = z.array(bookSchema);
 export const categoriesSchema = z.array(categorySchema);
 export const librariesSchema = z.array(librarySchema);

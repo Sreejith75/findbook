@@ -21,11 +21,13 @@ function createRentalFilters(records: RentalRecord[]): string[] {
   const activeCount = records.filter(
     (record) => record.status === "active" || record.status === "transit" || record.status === "overdue",
   ).length;
+  const returnRequestedCount = records.filter((record) => record.status === "returnRequested").length;
   const returnedCount = records.filter((record) => record.status === "returned").length;
 
   return [
     `All (${records.length})`,
     `Active (${activeCount})`,
+    `Return Requested (${returnRequestedCount})`,
     `Returned (${returnedCount})`,
   ];
 }
@@ -52,6 +54,10 @@ export function RentalsOverview({ data }: RentalsOverviewProps) {
       return data.rentals.filter((record) => record.status === "returned");
     }
 
+    if (activeFilter.startsWith("Return Requested")) {
+      return data.rentals.filter((record) => record.status === "returnRequested");
+    }
+
     return data.rentals;
   }, [activeFilter, data.rentals]);
 
@@ -60,7 +66,7 @@ export function RentalsOverview({ data }: RentalsOverviewProps) {
       <FilterChips items={rentalFilters} onChange={setActiveFilter} />
       <div className="activity-list">
         {visibleRentals.map((record) => {
-          const renewalRequested = returnRequests.includes(record.id);
+          const returnRequested = returnRequests.includes(record.id);
 
           return (
             <RentalCard
@@ -68,7 +74,7 @@ export function RentalsOverview({ data }: RentalsOverviewProps) {
               alreadyReviewed={data.reviewedBookIds.includes(record.bookId)}
               onOpenReview={() => setReviewTarget(record)}
               onTrackDelivery={() => router.push("/deliveries")}
-              onRequestRenewal={() =>
+              onRequestReturn={() =>
                 void (async () => {
                   setPendingRentalId(record.id);
 
@@ -84,7 +90,7 @@ export function RentalsOverview({ data }: RentalsOverviewProps) {
                 })()
               }
               record={record}
-              renewalRequested={renewalRequested || pendingRentalId === record.id}
+              returnRequested={record.status === "returnRequested" || returnRequested || pendingRentalId === record.id}
             />
           );
         })}
@@ -101,25 +107,27 @@ export function RentalsOverview({ data }: RentalsOverviewProps) {
 type RentalCardProps = {
   alreadyReviewed: boolean;
   onOpenReview: () => void;
-  onRequestRenewal: () => void;
+  onRequestReturn: () => void;
   onTrackDelivery: () => void;
   record: RentalRecord;
-  renewalRequested: boolean;
+  returnRequested: boolean;
 };
 
 function RentalCard({
   alreadyReviewed,
   onOpenReview,
-  onRequestRenewal,
+  onRequestReturn,
   onTrackDelivery,
   record,
-  renewalRequested,
+  returnRequested,
 }: RentalCardProps) {
   const statusLabel =
     record.status === "transit"
       ? "In Transit"
       : record.status === "active"
         ? "Active"
+        : record.status === "returnRequested"
+          ? "Return Requested"
         : record.status === "overdue"
           ? "Overdue"
         : "Returned";
@@ -149,11 +157,16 @@ function RentalCard({
         <div className="rental-actions">
           {record.status === "active" || record.status === "overdue" ? (
             <Button
-              disabled={renewalRequested}
-              onClick={onRequestRenewal}
-              variant={renewalRequested ? "outline" : "primary"}
+              disabled={returnRequested}
+              onClick={onRequestReturn}
+              variant={returnRequested ? "outline" : "primary"}
             >
-              {renewalRequested ? "Return Requested" : "Request Return"}
+              {returnRequested ? "Return Requested" : "Request Return"}
+            </Button>
+          ) : null}
+          {record.status === "returnRequested" ? (
+            <Button disabled variant="outline">
+              Pickup Pending
             </Button>
           ) : null}
           {record.status === "transit" ? (

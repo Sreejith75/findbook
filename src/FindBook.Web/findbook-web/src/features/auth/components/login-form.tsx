@@ -36,6 +36,10 @@ export function LoginForm() {
 
   return (
     <form className="stack-form auth-form-card" onSubmit={submit}>
+      <div className="auth-form-header">
+        <div className="auth-form-title">Welcome back</div>
+        <div className="auth-form-copy">Pick up where you left off.</div>
+      </div>
       <Input
         autoComplete="email"
         error={form.formState.errors.email?.message}
@@ -51,8 +55,11 @@ export function LoginForm() {
       />
       {serverError ? <div className="form-alert">{serverError}</div> : null}
       <Button disabled={form.formState.isSubmitting} type="submit">
-        Sign In
+        {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
       </Button>
+      <div className="auth-form-footnote">
+        Access your account to continue reading, renting, and managing returns.
+      </div>
     </form>
   );
 }

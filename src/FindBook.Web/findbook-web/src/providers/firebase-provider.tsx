@@ -7,6 +7,7 @@ import { onIdTokenChanged } from "firebase/auth";
 
 import { AUTH_COOKIE_NAME } from "@/constants/auth";
 import { resetAuthenticatedSessionCache } from "@/features/book-rental/services/book-rental.client";
+import type { ApiAuthSession } from "@/features/book-rental/types/book-rental.types";
 import {
   getFirebaseAuth,
   initializeFirebaseAnalytics,
@@ -21,6 +22,7 @@ type FirebaseProviderProps = {
 type AuthContextValue = {
   isAuthenticated: boolean;
   isLoading: boolean;
+  session: ApiAuthSession | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   user: User | null;
@@ -31,6 +33,7 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 export function FirebaseProvider({ children }: FirebaseProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<ApiAuthSession | null>(null);
 
   useEffect(() => {
     void initializeFirebaseAnalytics();
@@ -52,8 +55,10 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
         if (nextUser) {
           const token = await nextUser.getIdToken();
           document.cookie = `${AUTH_COOKIE_NAME}=${token}; Path=/; SameSite=Lax`;
+          setSession(await fetchSession());
         } else {
           document.cookie = `${AUTH_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+          setSession(null);
         }
 
         resetAuthenticatedSessionCache();
@@ -76,19 +81,31 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
   const value: AuthContextValue = {
     isAuthenticated: !!user,
     isLoading,
+    session,
     signIn: async (email: string, password: string) => {
       const credential = await signInWithFirebase(email, password);
       const token = await credential.user.getIdToken(true);
       document.cookie = `${AUTH_COOKIE_NAME}=${token}; Path=/; SameSite=Lax`;
       resetAuthenticatedSessionCache();
+      setSession(await fetchSession());
     },
     signOut: async () => {
       await signOutFromFirebase();
       document.cookie = `${AUTH_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
       resetAuthenticatedSessionCache();
+      setSession(null);
     },
     user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+async function fetchSession(): Promise<ApiAuthSession | null> {
+  const response = await fetch("/api/auth/session", { cache: "no-store" });
+  if (!response.ok) {
+    return null;
+  }
+
+  return response.json() as Promise<ApiAuthSession>;
 }

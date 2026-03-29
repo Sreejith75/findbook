@@ -51,8 +51,86 @@ export function BookCollection({
     setBookToRent(book);
   };
 
+  const highlightedBook = visibleBooks[0] ?? null;
+  const availableCount = visibleBooks.filter((book) => book.isAvailable).length;
+
   return (
     <>
+      {highlightedBook ? (
+        <section className="catalog-stage">
+          <div className="catalog-stage-copy">
+            <div className="catalog-stage-kicker">Curated spotlight</div>
+            <h2 className="catalog-stage-title">{highlightedBook.title}</h2>
+            <div className="catalog-stage-author">{highlightedBook.author}</div>
+            <p className="catalog-stage-description">{highlightedBook.description}</p>
+            <div className="catalog-stage-meta">
+              <div className="catalog-stage-stat">
+                <span className="catalog-stage-stat-label">Available now</span>
+                <strong>{availableCount}</strong>
+              </div>
+              <div className="catalog-stage-stat">
+                <span className="catalog-stage-stat-label">Genres in view</span>
+                <strong>{new Set(visibleBooks.map((book) => book.genre)).size}</strong>
+              </div>
+              <div className="catalog-stage-stat">
+                <span className="catalog-stage-stat-label">Rental plan</span>
+                <strong>{highlightedBook.weeklyPrice}/week</strong>
+              </div>
+            </div>
+            <div className="catalog-stage-tags">
+              {highlightedBook.tags.map((tag) => (
+                <span className="catalog-stage-tag" key={tag}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+            <div className="catalog-stage-actions">
+              <button
+                className="catalog-stage-button catalog-stage-button-primary"
+                onClick={() => handleRequest(highlightedBook)}
+                type="button"
+              >
+                Rent Spotlight Book
+              </button>
+              <button
+                className="catalog-stage-button catalog-stage-button-secondary"
+                onClick={() => setSelectedBook(highlightedBook)}
+                type="button"
+              >
+                View Details
+              </button>
+            </div>
+          </div>
+          <button
+            className="catalog-stage-visual"
+            onClick={() => setSelectedBook(highlightedBook)}
+            style={{ background: highlightedBook.accentColor }}
+            type="button"
+          >
+            {highlightedBook.coverImageUrl ? (
+              <img
+                alt={`Cover of ${highlightedBook.title}`}
+                className="catalog-stage-image"
+                src={highlightedBook.coverImageUrl}
+              />
+            ) : (
+              <div className="catalog-stage-emoji">{highlightedBook.emoji}</div>
+            )}
+            <div className="catalog-stage-badge">{highlightedBook.genre}</div>
+          </button>
+        </section>
+      ) : null}
+
+      <div className="catalog-toolbar">
+        <div>
+          <div className="catalog-toolbar-title">Browse shelves</div>
+          <div className="catalog-toolbar-subtitle">
+            {visibleBooks.length} titles in view, {availableCount} ready for delivery
+            {activeQuery ? `, matching "${activeQuery}"` : ""}.
+          </div>
+        </div>
+        <div className="catalog-toolbar-pill">{activeFilter}</div>
+      </div>
       <FilterChips items={filterOptions} onChange={setActiveFilter} />
       <div className="books-grid">
         {visibleBooks.map((book) => {

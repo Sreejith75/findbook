@@ -14,19 +14,22 @@ public class UserAccount : EntityBase<UserAccount, UserAccountId>, IAggregateRoo
     EmailAddress email,
     PasswordHash passwordHash,
     AccountRole role,
-    PhoneNumber? phoneNumber = null)
+    PhoneNumber? phoneNumber = null,
+    FirebaseUid? firebaseUid = null)
   {
     FullName = fullName;
     Email = email;
     PasswordHash = passwordHash;
     Role = role;
     PhoneNumber = phoneNumber;
+    FirebaseUid = firebaseUid;
   }
 
   public PersonName FullName { get; private set; }
   public EmailAddress Email { get; private set; }
   public PasswordHash PasswordHash { get; private set; }
   public PhoneNumber? PhoneNumber { get; private set; }
+  public FirebaseUid? FirebaseUid { get; private set; }
   public AccountRole Role { get; private set; } = AccountRole.User;
   public LibraryId? ManagedLibraryId { get; private set; }
   public IReadOnlyCollection<SavedAddress> SavedAddresses => _savedAddresses.AsReadOnly();
@@ -55,6 +58,13 @@ public class UserAccount : EntityBase<UserAccount, UserAccountId>, IAggregateRoo
     }
 
     ManagedLibraryId = libraryId;
+  }
+
+  public void ClearManagedLibrary() => ManagedLibraryId = null;
+
+  public void BindFirebaseIdentity(FirebaseUid firebaseUid)
+  {
+    FirebaseUid = firebaseUid;
   }
 
   public SavedAddress AddAddress(SavedAddressId addressId, PostalAddress address, bool isDefault)

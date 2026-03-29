@@ -85,6 +85,16 @@ export type ApiAuthSession = {
   fullName: string;
   email: string;
   role: string;
+  managedLibraryId: ID | null;
+  capabilities: {
+    canAccessAdminWorkspace: boolean;
+    canManageCatalog: boolean;
+    canManageUsers: boolean;
+    canManageDeliveries: boolean;
+    canManageAdminRoles: boolean;
+    canViewDispatchQueue: boolean;
+    canOperateDeliveryTasks: boolean;
+  };
 };
 
 export type ApiAdminOverview = {
@@ -107,6 +117,7 @@ export type Book = {
   genre: string;
   accentColor: string;
   emoji: string;
+  coverImageUrl?: string | null;
   weeklyPrice: string;
   pages: number;
   rating: string;
@@ -151,7 +162,7 @@ export type RentalRecord = {
   accentColor: string;
   rentedOn: string;
   dueOn: string;
-  status: "transit" | "active" | "returned" | "overdue";
+  status: "transit" | "active" | "returnRequested" | "returned" | "overdue";
   progress: number;
 };
 
@@ -237,6 +248,7 @@ export type RentalsOverviewData = {
 };
 
 export type DeliveriesOverviewData = {
+  viewMode: "reader" | "delivery" | "admin";
   activeDelivery: DeliveryHistoryItem | null;
   activeTitle: string | null;
   activeSubtitle: string | null;
